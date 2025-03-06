@@ -70,7 +70,7 @@ export async function registerDID(subDid: string, targetDid: string, publicKey: 
     );
 
     // const decoded_key = decodeBase64ToUint8Array(DID_PRIVATEKEY_FOR_REGISTER);
-    const decoded_key = decodeBase64ToUint8Array("aG9sZGVyMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDCKHNm4VR4VoJy8pAQEnIFe90vrtlzEFIZZ/24qlu5Y2w==")
+    const decoded_key = decodeBase64ToUint8Array(DID_PRIVATEKEY_FOR_REGISTER);
     const privateKey64 = new Uint8Array(decoded_key);
     const signature = nacl.sign.detached(messageBytes, privateKey64);
     nymRequest.setSignature({ signature });

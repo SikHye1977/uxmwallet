@@ -70,3 +70,6 @@ yarn-error.log
 
 # genesis txn
 /src/misc/
+
+# google API key
+/ios/GoogleService-info.plist

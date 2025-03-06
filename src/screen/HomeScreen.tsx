@@ -11,6 +11,7 @@ function HomeScreen() {
       <Text>HomeScreen</Text>
       <Button title="Go to DID Profile Screen" onPress={() => navigation.navigate('Profile')} />
       <Button title="Go to Ticket Screen" onPress={() => navigation.navigate('Ticket')} />
+      <Button title="Go to DID Auth Screen" onPress={() => navigation.navigate('Auth')} />
     </View>
   )
 }
