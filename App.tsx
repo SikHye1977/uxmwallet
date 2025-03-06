@@ -3,6 +3,7 @@ import { NavigationContainer } from '@react-navigation/native';
 import StackNavigator from './src/navigation/StackNavigator';
 import { StyleSheet, View } from 'react-native';
 import messaging from '@react-native-firebase/messaging';
+import BottomTabsNavigator from './src/navigation/BottomTabsNavigator';
 
 const requestUserPermission = async () => {
   const authorizationStatus = await messaging().requestPermission();
@@ -34,7 +35,8 @@ const App = () => {
 
   return (
     <NavigationContainer>
-      <StackNavigator />
+      {/* <StackNavigator /> */}
+      <BottomTabsNavigator />
     </NavigationContainer>
   );
 };

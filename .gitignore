@@ -72,4 +72,4 @@ yarn-error.log
 /src/misc/
 
 # google API key
-/ios/GoogleService-info.plist
+ios/GoogleService-Info.plist
