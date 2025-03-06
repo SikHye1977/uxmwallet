@@ -12,7 +12,7 @@ function BottomTabsNavigator() {
     <Tab.Navigator>
       <Tab.Screen name="Ticket" component={TicketScreen} />
       <Tab.Screen name="Home" component={HomeScreen} />
-      {/* <Tab.Screen name="Auth" component={AuthScreen} /> */}
+      <Tab.Screen name="Auth" component={AuthScreen} />
       <Tab.Screen name="Profile" component={ProfileScreen} />
     </Tab.Navigator>
   );

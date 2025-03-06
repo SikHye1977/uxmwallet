@@ -6,12 +6,20 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 function AuthScreen() {
   const [did, setDid] = useState<any>(null);
-    
+  //for test
+  const [token, setToken] = useState<any>(null);
+  //for test 
+  
   const loadDid = async () => {
       try {
         const storedDid = await getItem('DID');
         console.log(`저장된 DID: ${storedDid}`);
         setDid(storedDid);
+        //for test
+        const storedToken = await getItem('fcmToken');
+        console.log(`저장된 fcmToken: ${token}`);
+        setToken(storedToken);
+        //for test
       } catch (error) {
         console.error('DID 로드 실패:', error);
       }
@@ -48,6 +56,10 @@ function AuthScreen() {
         </Text>
         <Text>Selected DID</Text>
         <Text style={styles.didText}>{did}</Text>
+        {/* fot tets */}
+        <Text>Your FCM Token</Text>
+        <Text style={styles.didText}>{token}</Text>
+        {/* fot tets */}
         </View>
       <View style={styles.buttonContainer}>
         <TouchableOpacity
