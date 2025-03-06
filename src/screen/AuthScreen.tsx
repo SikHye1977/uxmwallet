@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import {StyleSheet, Text, TouchableOpacity, View} from 'react-native';
 import { getItem } from '../utils/AsyncStorage';
 import { DidAuth } from '../utils/DIDAuth';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 function AuthScreen() {
   const [did, setDid] = useState<any>(null);
@@ -40,22 +41,50 @@ function AuthScreen() {
     
 
   return (
-    <View>
-      <Text>
-        this is Auth Screen
-      </Text>
-      <Text>My DID: {did}</Text>
-      <TouchableOpacity
-        style={styles.button}
-        onPress={didauth}
-        >
-        <Text style={styles.buttonText}>DID로 로그인</Text>
-      </TouchableOpacity>
-    </View>
+    <SafeAreaView style={styles.container}>
+      <View style={styles.header}>
+        <Text style={styles.title}>
+          this is Auth Screen
+        </Text>
+        <Text>Selected DID</Text>
+        <Text style={styles.didText}>{did}</Text>
+        </View>
+      <View style={styles.buttonContainer}>
+        <TouchableOpacity
+          style={styles.button}
+          onPress={didauth}
+          >
+          <Text style={styles.buttonText}>DID로 로그인</Text>
+        </TouchableOpacity>
+      </View>
+    </SafeAreaView>
   )
 }
 
 const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    padding: 20,
+  },
+  header: {
+    alignItems: 'center',
+    marginTop: 40,
+  },
+  title: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginBottom: 10,
+  },
+  didText: {
+    fontSize: 16,
+    color: 'blue',
+  },
+  buttonContainer: {
+    position: 'absolute',
+    bottom: '20%',
+    alignSelf: 'center',
+    width: '100%',
+  },
   button: {
     backgroundColor: '#3b82f6',
     width: '90%',
