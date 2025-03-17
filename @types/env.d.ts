@@ -1,4 +1,7 @@
 declare module '@env' {
     export const DID_PRIVATEKEY_FOR_REGISTER: string;
     export const MEDIATOR_URL: string;
+    export const ISSUER_BACKEND_URL: string;
+    export const ISSUER_INNER_PRIVATE_DID: string;
+    export const ISSUER_INNER_PUBLIC_DID: string;
 }
