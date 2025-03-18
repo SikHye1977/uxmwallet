@@ -6,30 +6,65 @@ import RNFS from 'react-native-fs';
 import { Buffer } from 'buffer';
 import { DID_PRIVATEKEY_FOR_REGISTER } from '@env';
 import 'react-native-get-random-values'
+import { AttribRequest } from '@hyperledger/indy-vdr-react-native';
 
 // 25.02.10 추가
 // ED25519 키 쌍 생성 및 DID 생성
-export async function generateDID() {
-  // ✅ ED25519 키 쌍 생성 (32바이트)
-  const keyPair = nacl.sign.keyPair();
+// export async function generateDID() {
+//   // ✅ ED25519 키 쌍 생성 (32바이트)
+//   const keyPair = nacl.sign.keyPair();
 
-  // ✅ Base58 인코딩 (DID는 16바이트 또는 32바이트 키를 사용해야 함)
-  const publicKeyBase58 = bs58.encode(keyPair.publicKey); // 44~45자
-  const privateKeyBase58 = bs58.encode(keyPair.secretKey);
+//   // ✅ Base58 인코딩 (DID는 16바이트 또는 32바이트 키를 사용해야 함)
+//   const publicKeyBase58 = bs58.encode(keyPair.publicKey); // 44~45자
+//   const privateKeyBase58 = bs58.encode(keyPair.secretKey);
 
-  // ✅ DID 생성 (첫 22~23자 사용하여 Indy 규격 충족)
-  const did = publicKeyBase58.slice(0, 22); // 22~23자 유지
+//   // ✅ DID 생성 (첫 22~23자 사용하여 Indy 규격 충족)
+//   const did = publicKeyBase58.slice(0, 22); // 22~23자 유지
+
+//   console.log("✅ 생성된 DID:", did);
+//   console.log("✅ Public Key (Base58):", publicKeyBase58);
+//   console.log("✅ Private Key (Base58):", privateKeyBase58);
+
+//   return {
+//     did,
+//     publicKey: publicKeyBase58,
+//     privateKey: privateKeyBase58,
+//   };
+// }
+
+// 25.03.18 추가
+// Ed25519, x25519 키 쌍 생성 및 DID 생성
+export async function generateSeparateKeyPairs() {
+  // ✅ Ed25519 키 쌍 생성 (DID 및 서명용)
+  const ed25519KeyPair = nacl.sign.keyPair();
+
+  // ✅ X25519 키 쌍 생성 (키 교환용)
+  const x25519KeyPair = nacl.box.keyPair();
+
+  // ✅ Base58 인코딩
+  const edPublicKeyBase58 = bs58.encode(ed25519KeyPair.publicKey);
+  const edPrivateKeyBase58 = bs58.encode(ed25519KeyPair.secretKey);
+  const x25519PublicKeyBase58 = bs58.encode(x25519KeyPair.publicKey);
+  const x25519PrivateKeyBase58 = bs58.encode(x25519KeyPair.secretKey);
+
+  // ✅ DID 생성 (Indy 규격을 충족하도록 22~23자 유지)
+  const did = edPublicKeyBase58.slice(0, 22);
 
   console.log("✅ 생성된 DID:", did);
-  console.log("✅ Public Key (Base58):", publicKeyBase58);
-  console.log("✅ Private Key (Base58):", privateKeyBase58);
+  console.log("✅ Ed25519 Public Key:", edPublicKeyBase58);
+  console.log("✅ Ed25519 Private Key:", edPrivateKeyBase58);
+  console.log("✅ X25519 Public Key:", x25519PublicKeyBase58);
+  console.log("✅ X25519 Private Key:", x25519PrivateKeyBase58);
 
   return {
     did,
-    publicKey: publicKeyBase58,
-    privateKey: privateKeyBase58,
+    edPublicKey: edPublicKeyBase58,
+    edPrivateKey: edPrivateKeyBase58,
+    x25519PublicKey: x25519PublicKeyBase58,
+    x25519PrivateKey: x25519PrivateKeyBase58,
   };
 }
+
 
 // 환경변수 unit8array로 디코딩 하기 위한 함수
 function decodeBase64ToUint8Array(base64String: string): Uint8Array {
@@ -54,7 +89,7 @@ export async function registerDID(subDid: string, targetDid: string, publicKey: 
       verkey,  // ✅ 해당 DID의 Public Key (Base58)
       // alias,  // ✅ (선택 사항) DID의 별칭
       // role,  // ✅ 역할을 "ENDORSER"로 설정
-      version: 1,  // ✅ 필수 프로토콜 버전 추가
+      version: 2,  // ✅ 필수 프로토콜 버전 추가
     };
 
     console.log("✅ NYM 트랜잭션 JSON:", JSON.stringify(nymTransaction, null, 2));
@@ -88,6 +123,59 @@ export async function registerDID(subDid: string, targetDid: string, publicKey: 
     return null;
   }
 }
+
+// 25.03.18 추가
+// X25519 키를 ATTRIB 트랜잭션을 통해 DID Document에 추가
+export async function addX25519PublicKey(submitterDid: string, targetDid: string, x25519PublicKey: string, privateKey: string) {
+  const pool = await setupIndyPool();
+
+  try {
+    // ✅ X25519 공개 키만 포함하는 JSON 데이터 생성
+    const rawData = {
+      "x25519-public-key": x25519PublicKey
+    };
+
+    // ✅ ATTRIB 트랜잭션 생성 (X25519 키만 저장)
+    const attribTransaction = {
+      submitterDid,  // ✅ X25519 키를 등록할 DID 소유자
+      targetDid,  // ✅ 대상 DID
+      raw: JSON.stringify(rawData)  // ✅ X25519 키만 포함
+    };
+
+    console.log("✅ X25519 공개 키 ATTRIB 트랜잭션 JSON:", JSON.stringify(attribTransaction, null, 2));
+
+    // ✅ AttribRequest 객체 생성
+    const attribRequest = new AttribRequest(attribTransaction);
+    console.log("✅ ATTRIB Request 생성 완료:", attribRequest);
+
+    const encoder = new TextEncoder();
+    const messageBytes = encoder.encode(attribRequest.signatureInput);
+
+    // ✅ Base58로 인코딩된 Private Key를 디코딩하여 Uint8Array로 변환
+    const privateKeyUint8Array = bs58.decode(privateKey);
+
+    // ✅ DID 소유자의 Private Key로 서명 (Endorser가 아니라!)
+    const signature = nacl.sign.detached(messageBytes, privateKeyUint8Array);
+    attribRequest.setSignature({ signature });
+
+    if (!pool) {
+      console.log("❌ Pool이 생성되지 않음");
+      return;
+    }
+
+    // ✅ Indy Ledger에 트랜잭션 제출
+    const response = await pool.submitRequest(attribRequest);
+    console.log("✅ X25519 공개 키 등록 완료:", response);
+    pool.close();
+    return response;
+
+  } catch (error) {
+    console.error("❌ X25519 공개 키 등록 실패:", error);
+    return null;
+  }
+}
+
+
 
 // create pool for register did
 export async function setupIndyPool(): Promise<PoolCreate | null> {
