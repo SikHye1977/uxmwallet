@@ -6,8 +6,32 @@ import { getMessaging, onMessage, setBackgroundMessageHandler } from '@react-nat
 import { getApp } from '@react-native-firebase/app';
 import BottomTabsNavigator from './src/navigation/BottomTabsNavigator';
 import { setItem, getItem } from './src/utils/AsyncStorage';
+import RootNavigator from './src/navigation/RootNavigator';
 
 const FCM_TOKEN_KEY = 'fcmToken';
+
+const linking = {
+  prefixes: ['uxmwallet://'],
+  config: {
+    screens: {
+      Auth: {
+        path: 'auth',
+        parse: {
+          authRequestId: (id: string) => `${id}`,
+        },
+      },
+      MainTabs: {
+        path: 'tabs',
+        screens: {
+          Home: 'home',
+          Ticket: 'ticket',
+          Profile: 'profile',
+        },
+      },
+    },
+  },
+};
+
 
 const requestUserPermission = async () => {
   // const authorizationStatus = await messaging().requestPermission();
@@ -62,10 +86,10 @@ const App = () => {
   }, []);
 
   return (
-    <NavigationContainer>
-      {/* <StackNavigator /> */}
-      <BottomTabsNavigator />
+    <NavigationContainer linking={linking}>
+      <RootNavigator />
     </NavigationContainer>
+
   );
 };
 

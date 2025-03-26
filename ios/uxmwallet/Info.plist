@@ -79,5 +79,16 @@
 	</array>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<false/>
+	<key>CFBundleURLTypes</key>
+  <array>
+    <dict>
+      <key>CFBundleURLName</key>
+      <string>com.uxmwallet.app</string>
+      <key>CFBundleURLSchemes</key>
+      <array>
+        <string>uxmwallet</string>
+      </array>
+    </dict>
+  </array>
 </dict>
 </plist>

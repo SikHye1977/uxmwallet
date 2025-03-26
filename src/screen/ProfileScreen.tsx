@@ -106,7 +106,7 @@ function ProfileScreen() {
       const storededVerkey = await getItem('edVerkey');
       console.log(`저장된 DID의 edVerkey : ${storededVerkey}`);
       setEdVerkey(storededVerkey);
-      const storededSecretKey = await getItem('Secretkey');
+      const storededSecretKey = await getItem('edSecretkey');
       console.log(`저장된 DID의 edSecretKey : ${storededSecretKey}`);
       setEdSecretkey(storededSecretKey);
       const storedxVerkey = await getItem('xVerkey');

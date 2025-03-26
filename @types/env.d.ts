@@ -4,4 +4,8 @@ declare module '@env' {
     export const ISSUER_BACKEND_URL: string;
     export const ISSUER_INNER_PRIVATE_DID: string;
     export const ISSUER_INNER_PUBLIC_DID: string;
+    export const ISSUER_DID: string;
+    export const ISSUER_DID_INDY_PRIVATE_KEY: string;
+    export const ISSUER_INNER_PRIVATE_X25519_KEY: string;
+    export const ISSUER_INNER_PUBLIC_X25519_KEY: string;
 }

@@ -1,13 +1,30 @@
 import React, { useEffect, useState } from 'react';
 import {StyleSheet, Text, TouchableOpacity, View} from 'react-native';
 import { getItem } from '../utils/AsyncStorage';
-import { decrypt_challenge, get_challenge, regist_token } from '../utils/DIDAuth';
+import { decrypt_challenge, get_challenge, regist_token, verify_challenge } from '../utils/DIDAuth';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { RouteProp, useRoute } from '@react-navigation/native';
+
+//25.03.26 추가
+type RootStackParamList = {
+  Auth: { authRequestId?: string };
+  MainTabs: undefined;
+};
+
+type AuthScreenRouteParams = {
+  authRequestId?: string;
+};
 
 function AuthScreen() {
+  //25.03.26 추가
+  const route = useRoute<RouteProp<RootStackParamList, 'Auth'>>();
+  const [authRequestId, setAuthRequestId] = useState<string | undefined>(undefined);
+  
   const [did, setDid] = useState<any>(null);
-  const [verkey, setVerkey] = useState<string | null>(null);
-  const [secretkey, setSecretkey] = useState<string | null>(null);
+  const [edverkey, setEdVerkey] = useState<string | null>(null);
+  const [edsecretkey, setEdSecretkey] = useState<string | null>(null);
+  const [Xverkey, setXVerkey] = useState<string | null>(null);
+  const [Xsecretkey, setXSecretkey] = useState<string | null>(null);
   //for test
   const [token, setToken] = useState<any>(null);
   //for test 
@@ -17,29 +34,37 @@ function AuthScreen() {
 
   const loadDid = async () => {
       try {
-        const storedDid = await getItem('DID');
-        console.log(`저장된 DID: ${storedDid}`);
-        setDid(storedDid);
         //for test
         const storedToken = await getItem('fcmToken');
         console.log(`저장된 fcmToken: ${token}`);
         setToken(storedToken);
         //for test
-        const storedVerkey = await getItem('Verkey');
-        console.log(`저장된 DID의 Verkey : ${storedVerkey}`);
-        setVerkey(storedVerkey);
-        const storedSecretKey = await getItem('Secretkey');
-        console.log(`저장된 DID의 SecretKey : ${storedSecretKey}`);
-        setSecretkey(storedSecretKey);
+        const storedDid = await getItem('DID');
+        console.log(`저장된 DID: ${storedDid}`);
+        setDid(storedDid);
+        const storededVerkey = await getItem('edVerkey');
+        console.log(`저장된 DID의 edVerkey : ${storededVerkey}`);
+        setEdVerkey(storededVerkey);
+        const storededSecretKey = await getItem('Secretkey');
+        console.log(`저장된 DID의 edSecretKey : ${storededSecretKey}`);
+        setEdSecretkey(storededSecretKey);
+        const storedxVerkey = await getItem('xVerkey');
+        console.log(`저장된 DID의 xVerkey : ${storedxVerkey}`);
+        setXVerkey(storedxVerkey);
+        const storedxSecretkey = await getItem('xSecretkey');
+        console.log(`저장된 DID의 xSecretkey : ${storedxSecretkey}`);
+        setXSecretkey(storedxSecretkey);
       } catch (error) {
         console.error('DID 로드 실패:', error);
       }
-  };
+    };
 
   // 화면 로드시 로딩
   useEffect(() => {
+    console.log('[DEBUG] route:', route);
+    setAuthRequestId(route.params?.authRequestId);
     loadDid();
-  }, []);
+  }, [route]);
   
   // 25.03.05 Mediator에 토큰 등록
   const registtoken = async () => {
@@ -61,11 +86,12 @@ function AuthScreen() {
 
   // 25.03.12 Get Challenge 
   const getchallenge = async () => {
-    if(!did) {
+    if(!did || !authRequestId) {
       console.error("DID가 존재하지 않습니다.");
       return;
     }
     const result = await get_challenge(
+      authRequestId,
       did
     );
     setChallenge(result);
@@ -76,40 +102,56 @@ function AuthScreen() {
       console.error("Challenge 생성 실패");
     }
   }
-    
+  
+  // 25.03.20 추가
+  // challenge 검증
   const decrpytchallenge = async () => {
-    if(!did || !verkey || !secretkey){
+    if(!did || !Xverkey){
       console.error("DID가 존재하지 않습니다.");
       return;
     }
-    const result = await decrypt_challenge(challenge,verkey,secretkey);
+    const result = await decrypt_challenge(challenge);
     console.log(result);
     setDecryptedCahllenge(result);
   }
+
+  const verifychallenge = async () => {
+    if(!did || !decryptedchallenge){
+      console.error("did 또는 challenge가 존재하지 않습니다.");
+      return;
+    }
+    const result = await verify_challenge(did,decryptedchallenge);
+    console.log(result);
+  }
+
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.title}>
           this is Auth Screen
         </Text>
+        <Text>Auth Request ID: {authRequestId}</Text>
         <Text>Selected DID</Text>
         <Text style={styles.didText}>{did}</Text>
         {/* fot tets */}
-        <Text>Your FCM Token</Text>
-        <Text style={styles.didText}>{token}</Text>
+        {/* <Text>Your FCM Token</Text>
+        <Text style={styles.didText}>{token}</Text> */}
         {/* fot tets */}
         </View>
         {/* fot tets */}
         <Text>Your Challenge</Text>
-        <Text>{challenge}</Text>
+        <Text style={styles.didText}>{challenge}</Text>
+        <Text>Your Decrypted Challenge</Text>
+        <Text style={styles.didText}>{decryptedchallenge}</Text>
         {/* fot tets */}
       <View style={styles.buttonContainer}>
-        <TouchableOpacity
+        {/* <TouchableOpacity
           style={styles.button}
           onPress={registtoken}
           >
           <Text style={styles.buttonText}>FCM 토큰 등록</Text>
-        </TouchableOpacity>
+        </TouchableOpacity> */}
         <TouchableOpacity
           style={styles.button}
           onPress={getchallenge}
@@ -121,6 +163,12 @@ function AuthScreen() {
           onPress={decrpytchallenge}
         >
           <Text style={styles.buttonText}>DID Auth -decrypt-</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.button}
+          onPress={verifychallenge}
+        >
+          <Text style={styles.buttonText}>DID Auth -verify-</Text>
         </TouchableOpacity>
       </View>
     </SafeAreaView>
