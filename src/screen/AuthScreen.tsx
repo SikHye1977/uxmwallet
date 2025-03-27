@@ -4,19 +4,33 @@ import { getItem } from '../utils/AsyncStorage';
 import { decrypt_challenge, get_challenge, regist_token, verify_challenge } from '../utils/DIDAuth';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { RouteProp, useRoute } from '@react-navigation/native';
+import { Alert } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import { StackNavigationProp } from '@react-navigation/stack';
 
-//25.03.26 추가
-type RootStackParamList = {
-  Auth: { authRequestId?: string };
-  MainTabs: undefined;
-};
-
+// 25.03.26 추가
+// Deep Link를 통한 AuhtScreen 접근 개선
 type AuthScreenRouteParams = {
   authRequestId?: string;
 };
 
+// Root Stack (RootNavigator)
+type RootStackParamList = {
+  MainTabs: undefined | { screen: keyof MainTabParamList };
+  Auth: { authRequestId?: string };
+};
+
+// Bottom Tabs (BottomTabsNavigator)
+type MainTabParamList = {
+  Home: undefined;
+  Ticket: undefined;
+  Profile: undefined;
+};
+
+
 function AuthScreen() {
   //25.03.26 추가
+  const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
   const route = useRoute<RouteProp<RootStackParamList, 'Auth'>>();
   const [authRequestId, setAuthRequestId] = useState<string | undefined>(undefined);
   
@@ -115,15 +129,37 @@ function AuthScreen() {
     setDecryptedCahllenge(result);
   }
 
+  // 25.03.27 수정
+  // 검증 후 모달 -> 페이지 이동 // reload
   const verifychallenge = async () => {
-    if(!did || !decryptedchallenge){
-      console.error("did 또는 challenge가 존재하지 않습니다.");
+    if (!did || !decryptedchallenge || !authRequestId) {
+      console.error('did 또는 challenge가 존재하지 않습니다.');
       return;
     }
-    const result = await verify_challenge(did,decryptedchallenge);
+  
+    const result = await verify_challenge(authRequestId,did, decryptedchallenge);
     console.log(result);
-  }
-
+  
+    if (result === true) {
+      Alert.alert('성공', 'Auth에 성공했습니다', [
+        {
+          text: '확인',
+          onPress: () => navigation.navigate('MainTabs', { screen: 'Home' }),
+        },
+      ]);
+    } else {
+      Alert.alert('실패', 'Auth에 실패했습니다', [
+        {
+          text: '다시 시도',
+          onPress: () => {
+            // 상태 초기화
+            setChallenge(null);
+            setDecryptedCahllenge(null);
+          },
+        },
+      ]);
+    }
+  };  
 
   return (
     <SafeAreaView style={styles.container}>

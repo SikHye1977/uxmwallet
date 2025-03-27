@@ -116,11 +116,13 @@ export async function decrypt_challenge(encryptedChallengeBase58: string) {
 
 // 25.03.19
 // challenge 검증
-export async function verify_challenge(did: string, decryptedChallenge: string): Promise<boolean> {
+// 25.03.27
+// authRequestId 파라미터 추가
+export async function verify_challenge(authRequestId:string, did: string, decryptedChallenge: string): Promise<boolean> {
   try {
     const url = `http://${ISSUER_BACKEND_URL}/indy/api/v1/did-auth/verify`;
 
-    const requestBody = { did, decryptedChallenge };
+    const requestBody = { authRequestId ,did, decryptedChallenge };
 
     console.log(`🔎 [Wallet] Sending challenge verification request:`, requestBody);
 
