@@ -27,14 +27,15 @@ export async function regist_token(did: string, token: string) {
 }
 
 // Issuer-Back으로부터 Challenge를 전달받기 위한 함수
-export async function get_challenge(authRequestId: string,did: string) {
-  const url = `http://${ISSUER_BACKEND_URL}/indy/api/v1/did-auth/challenge`; // HTTPS 사용
+export async function get_challenge(authRequestId: string,did: string, deviceToken: string) {
+  console.log(ISSUER_BACKEND_URL);
+  const url = `https://${ISSUER_BACKEND_URL}/indy/api/v1/did-auth/challenge`; // HTTPS 사용
   
-  const requestBody = { authRequestId, did };
+  const requestBody = { authRequestId, did, deviceToken };
 
   try {
     const response = await axios.post(url, requestBody);
-    
+    console.log(deviceToken);
     console.log("서버 응답:", response.data);
     return response.data.challenge;
   } catch (error: any) {
@@ -120,7 +121,7 @@ export async function decrypt_challenge(encryptedChallengeBase58: string) {
 // authRequestId 파라미터 추가
 export async function verify_challenge(authRequestId:string, did: string, decryptedChallenge: string): Promise<boolean> {
   try {
-    const url = `http://${ISSUER_BACKEND_URL}/indy/api/v1/did-auth/verify`;
+    const url = `https://${ISSUER_BACKEND_URL}/indy/api/v1/did-auth/verify`;
 
     const requestBody = { authRequestId ,did, decryptedChallenge };
 

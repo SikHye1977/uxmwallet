@@ -7,6 +7,7 @@ import { Buffer } from 'buffer';
 import { DID_PRIVATEKEY_FOR_REGISTER } from '@env';
 import 'react-native-get-random-values'
 import { AttribRequest } from '@hyperledger/indy-vdr-react-native';
+import { Platform } from 'react-native';
 
 // 25.02.10 추가
 // ED25519 키 쌍 생성 및 DID 생성
@@ -175,17 +176,42 @@ export async function addX25519PublicKey(submitterDid: string, targetDid: string
   }
 }
 
+// 25.04.09추가
+// 프로젝트 에셋에 제네시스 파일 추가 및 읽어오기
+async function copyGenesisFileToAppStorage(): Promise<string> {
+  const fileName = 'genesis.txn';
+  const destPath = `${RNFS.DocumentDirectoryPath}/${fileName}`;
 
+  const fileExists = await RNFS.exists(destPath);
+  if (!fileExists) {
+    const assetPath = Platform.OS === 'ios'
+      ? `${RNFS.MainBundlePath}/${fileName}`
+      : `assets/${fileName}`; // Android는 assets에 바로 접근 불가
+
+    try {
+      if (Platform.OS === 'ios') {
+        await RNFS.copyFile(assetPath, destPath);
+      } else {
+        // Android는 assets에서 파일 읽기 위해 raw 리소스로 등록 필요 (추가 설명 아래)
+        const content = await RNFS.readFileRes(fileName, 'utf8'); // Android는 리소스 ID 필요할 수 있음
+        await RNFS.writeFile(destPath, content, 'utf8');
+      }
+      console.log('Genesis 파일 복사 완료:', destPath);
+    } catch (err) {
+      console.error('Genesis 파일 복사 실패:', err);
+    }
+  }
+  return destPath;
+}
 
 // create pool for register did
 export async function setupIndyPool(): Promise<PoolCreate | null> {
-  const genesisFilePath = `/Users/hanseunghun/2025-w/uxmwallet/src/misc/genesis.txn`;
-
+  const genesisFilePath = await copyGenesisFileToAppStorage();
   const genesisData = await RNFS.readFile(genesisFilePath, 'utf8');
 
   const pool = new PoolCreate({
     parameters: {
-      transactions : genesisData
+      transactions: genesisData
     }
   });
   return pool;

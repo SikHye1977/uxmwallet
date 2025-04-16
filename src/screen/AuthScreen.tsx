@@ -106,7 +106,8 @@ function AuthScreen() {
     }
     const result = await get_challenge(
       authRequestId,
-      did
+      did,
+      token
     );
     setChallenge(result);
     setScreenKey(prevKey => prevKey + 1);
