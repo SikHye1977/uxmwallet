@@ -1,14 +1,24 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
-import { StyleSheet, View } from 'react-native';
-// import messaging from '@react-native-firebase/messaging';
-import { getMessaging, onMessage, setBackgroundMessageHandler } from '@react-native-firebase/messaging';
+import { StyleSheet } from 'react-native';
+import {
+  getMessaging,
+  onMessage,
+  setBackgroundMessageHandler,
+  onNotificationOpenedApp,
+  getInitialNotification,
+} from '@react-native-firebase/messaging';
 import { getApp } from '@react-native-firebase/app';
-import BottomTabsNavigator from './src/navigation/BottomTabsNavigator';
+
 import { setItem, getItem } from './src/utils/AsyncStorage';
 import RootNavigator from './src/navigation/RootNavigator';
+import { createNavigationContainerRef } from '@react-navigation/native';
+import { RootStackParamList } from './src/navigation/types';
 
 const FCM_TOKEN_KEY = 'fcmToken';
+
+// ✅ navigationRef에 타입 지정
+export const navigationRef = createNavigationContainerRef<RootStackParamList>();
 
 const linking = {
   prefixes: ['uxmwallet://'],
@@ -24,7 +34,12 @@ const linking = {
         path: 'tabs',
         screens: {
           Home: 'home',
-          Ticket: 'ticket',
+          Ticket: {
+            path: 'ticket',
+            parse: {
+              targetUrl: (url: string) => `${url}`,
+            },
+          },
           Profile: 'profile',
         },
       },
@@ -32,64 +47,64 @@ const linking = {
   },
 };
 
+// ✅ FCM 메시징 인스턴스
+const messaging = getMessaging(getApp());
+
+setBackgroundMessageHandler(messaging, async (remoteMessage) => {
+  console.log('[Background Message]', remoteMessage);
+});
 
 const requestUserPermission = async () => {
-  // const authorizationStatus = await messaging().requestPermission();
-  const messaging = getMessaging(getApp());
-  const authorizationStatus = await messaging.requestPermission();
-
-  if (authorizationStatus) {
-    // Generate FCM Token
-    // const token = await messaging().getToken();
+  const authStatus = await messaging.requestPermission();
+  if (authStatus) {
     const token = await messaging.getToken();
-    console.log('Authorization Status: ', authorizationStatus);
-    console.log('FCM Token: ', token); // Firebase 콘솔에서 알림 보낼 때 사용
-
+    console.log('Authorization Status:', authStatus);
+    console.log('FCM Token:', token);
     await setItem(FCM_TOKEN_KEY, token);
   }
 };
 
-// 앱이 background/quit(종료) 상태일 때 메시지를 처리
-// messaging().setBackgroundMessageHandler(async (remoteMessage) => {
-//   console.log('[Background Message] ', remoteMessage);
-// });
-setBackgroundMessageHandler(getMessaging(getApp()), async (remoteMessage) => {
-  console.log('[Background Message] ', remoteMessage);
-});
-
 const App = () => {
-  const [fcmToken, setFcmToken] = useState('');
-  
   useEffect(() => {
     requestUserPermission();
 
-    // 🔹 앱 실행 시 저장된 FCM 토큰 불러오기
-    const loadStoredToken = async () => {
-      const savedToken = await getItem(FCM_TOKEN_KEY);
-      if (savedToken) {
-        setFcmToken(savedToken);
-        console.log('Stored FCM Token:', savedToken);
+    const handleNotification = (remoteMessage: any) => {
+      const targetUrl = remoteMessage?.data?.target_url;
+      if (targetUrl && navigationRef.isReady()) {
+        console.log('🔗 Navigating with target_url:', targetUrl);
+        navigationRef.navigate('MainTabs', {
+          screen: 'Ticket',
+          params: { targetUrl },
+        });
       }
     };
 
-    loadStoredToken();
-
-    // 앱이 foreground(실행) 상태에서 메시지를 받을 때 처리
-    // const unsubscribe = messaging().onMessage(async (remoteMessage) => {
-    //   console.log('[Foreground Message] ', JSON.stringify(remoteMessage));
-    // });
-    const unsubscribe = onMessage(getMessaging(getApp()), async (remoteMessage) => {
-      console.log('[Foreground Message] ', JSON.stringify(remoteMessage));
+    const unsubscribeOnMessage = onMessage(messaging, async (remoteMessage) => {
+      console.log('[Foreground Message]', remoteMessage);
     });
 
-    return () => unsubscribe(); // 컴포넌트 언마운트 시 리스너 정리
+    const unsubscribeOnNotificationOpened = onNotificationOpenedApp(messaging, (remoteMessage) => {
+      console.log('[Background 클릭 → 앱 열림]', remoteMessage);
+      handleNotification(remoteMessage);
+    });
+
+    getInitialNotification(messaging).then((remoteMessage) => {
+      if (remoteMessage) {
+        console.log('[앱 종료 상태에서 알림 클릭 → 첫 실행]', remoteMessage);
+        handleNotification(remoteMessage);
+      }
+    });
+
+    return () => {
+      unsubscribeOnMessage();
+      unsubscribeOnNotificationOpened();
+    };
   }, []);
 
   return (
-    <NavigationContainer linking={linking}>
+    <NavigationContainer linking={linking} ref={navigationRef}>
       <RootNavigator />
     </NavigationContainer>
-
   );
 };
 
