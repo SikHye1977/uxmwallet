@@ -6,6 +6,7 @@ module.exports = {
       path: '.env',
       safe: true,
       allowUndefined: false
-    }]
+    }],
+    '@babel/plugin-transform-export-namespace-from'
   ]
 };

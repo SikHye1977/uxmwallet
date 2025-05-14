@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-nati
 import { useRoute, RouteProp, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { createVP } from '../utils/VPGenerator';
 
 type RootStackParamList = {
   TicketDetail: { vc: any };
@@ -13,6 +14,12 @@ function TicketDetailScreen() {
   const route = useRoute<RouteProp<RootStackParamList, 'TicketDetail'>>();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const vc = route.params.vc;
+  const [vp, setVp] = React.useState<string | null>(null);
+
+  const create_vp = async () => {
+    const result = await createVP(vc)
+    setVp(result);
+  }
 
   return (
     <SafeAreaView>
@@ -24,6 +31,15 @@ function TicketDetailScreen() {
       <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
         <Text style={styles.backButtonText}>← 목록으로 돌아가기</Text>
       </TouchableOpacity>
+      <TouchableOpacity style={styles.Button} onPress={create_vp}>
+        <Text style={styles.backButtonText}>VP 생성</Text>
+      </TouchableOpacity>
+      {vp && (
+          <View>
+            <Text style={styles.title}>VP (JWS)</Text>
+            <Text style={styles.json}>{vp}</Text>
+          </View>
+        )}
     </ScrollView>
     </SafeAreaView>
   );
@@ -55,6 +71,13 @@ const styles = StyleSheet.create({
     color: 'white',
     fontWeight: 'bold',
   },
+  Button : {
+    marginTop : 10,
+    backgroundColor: '#4D8AFF',
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+  }
 });
 
 export default TicketDetailScreen;

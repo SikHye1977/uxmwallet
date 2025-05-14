@@ -12,12 +12,60 @@ import { RouteProp, useRoute } from '@react-navigation/native';
 import { get_VC } from '../utils/GetVC';
 import { getItem, setItem, removeItem } from '../utils/AsyncStorage';
 import VCcard from '../component/VCcard';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 type TicketRouteParamList = {
   Ticket: {
     targetUrl?: string;
   };
 };
+
+// 25.05.14 test code
+/* test dummy code */
+const dummyVC = {
+  "@context": [
+    "https://www.w3.org/2018/credentials/v1",
+    "https://schema.org/docs/jsonldcontext.jsonld"
+  ],
+  id: "6c468803-8161-40cf-8ba0-941551479c2c",
+  type: ["VerifiableCredential", "Ticket"],
+  issuer: "did:sov:VV9pK5ZrLPRwYmotgACPkC",
+  issuanceDate: "2025-05-12T04:49:55.867Z",
+  expirationDate: "2025-02-10T15:00:00.000Z",
+  credentialSubject: {
+    id: "8Qw6PdG3RFJky21Xkuwyuh",
+    ticketNumber: "824a58a7-31d5-4672-b3c3-22adc7584185",
+    ticketToken: "vcData.reservedTicket.ticketToken",
+    issuedBy: {
+      name: "GD 단독 콘서트",
+      id: "did:sov:VV9pK5ZrLPRwYmotgACPkC"
+    },
+    underName: {
+      name: "8Qw6PdG3RFJky21Xkuwyuh",
+      id: "8Qw6PdG3RFJky21Xkuwyuh"
+    }
+  },
+  proof: {
+    type: "Ed25519Signature2020",
+    created: "2025-05-12T04:49:55.886Z",
+    proofPurpose: "assertionMethod",
+    verificationMethod: "GXUnLHyrYogGzyeiFLXdLv9EjEy8ZJN7XFnuSuN3Dn9M#keys-1",
+    jws: "eyJhbGciOiJFZERTQSIsImI2NCI6ZmFsc2UsImNyaXQiOlsiYjY0Il19..XpWaDNkN8oVVmLoo6hEU45kIrwCZTU-c6LvIGpJh9okCFJ2AbrjWNKEi_jsesPtnswPVtmaUMGZVepVyONtMAA"
+  }
+};
+
+const saveDummyVC = async () => {
+  try {
+    const ticketNumber = dummyVC.credentialSubject.ticketNumber;
+    const storageKey = `vc:${ticketNumber}`;
+    await setItem(storageKey, JSON.stringify(dummyVC));
+    console.log('✅ Dummy VC 저장 완료!');
+  } catch (error) {
+    console.error('❌ Dummy VC 저장 실패:', error);
+  }
+};
+/* test dummy code */
+
 
 function TicketScreen() {
   const route = useRoute<RouteProp<TicketRouteParamList, 'Ticket'>>();
@@ -71,6 +119,26 @@ function TicketScreen() {
 
     fetchOrLoadVC();
   }, [targetUrl]);
+
+  /* test dummy code */
+  useEffect(() => {
+    const loadStoredVCs = async () => {
+      const keys = await AsyncStorage.getAllKeys();
+      const vcKeys = keys.filter((key) => key.startsWith('vc:'));
+  
+      const vcData = await Promise.all(
+        vcKeys.map(async (key) => {
+          const stored = await getItem(key);
+          return stored ? JSON.parse(stored) : null;
+        })
+      );
+  
+      setVcList(vcData.filter(Boolean));
+    };
+  
+    loadStoredVCs();
+  }, []);
+  /* test dummy code */
 
   const handleDeleteTicket = async (ticketNumber: string) => {
     const storageKey = `vc:${ticketNumber}`;
