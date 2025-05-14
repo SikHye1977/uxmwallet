@@ -10,10 +10,24 @@ export function canonicalizeJsonLd(input: any): string {
   return canonicalize(input);
 }
 
+// VP의 타입을 정의
+interface VerifiablePresentation {
+  "@context": string[];
+  type: string[];
+  verifiableCredential: any[];
+  holder: string;
+  proof?: {
+    type: string;
+    created: string;
+    verificationMethod: string;
+    signatureValue: string;
+  };
+}
+
 // VP를 Detached JWS 형식으로 서명하는 함수
 export const createVP = async (vc: any) => {
   // VP 데이터 구성
-  const vp = {
+  const vp: VerifiablePresentation = {
     "@context": ["https://www.w3.org/2018/credentials/v1"],
     "type": ["VerifiablePresentation"],
     "verifiableCredential": [vc],
@@ -48,8 +62,14 @@ export const createVP = async (vc: any) => {
   // 서명값을 base64url로 인코딩
   const encodedSignature = base64url.encode(Buffer.from(signature));
 
-  // 최종적으로 header와 서명을 조합하여 리턴
-  const jwt = `${encodedHeader}..${encodedSignature}`;
-  
-  return jwt;
+  // VP의 proof 필드에 서명 추가
+  vp.proof = {
+    type: "Ed25519Signature2020",  // 서명 타입
+    created: new Date().toISOString(),
+    verificationMethod: "did:sov:4Lq1PHHxh2Pb8aFMQXr7N7#key-1", // DID 공개키를 나타내는 식별자
+    signatureValue: `${encodedHeader}..${encodedSignature}`  // JWS 서명 값
+  };
+
+  // 서명된 VP 반환
+  return vp;
 };
