@@ -4,27 +4,36 @@ import { useRoute, RouteProp, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { createVP } from '../utils/VPGenerator';
+import QRCode from 'react-native-qrcode-svg'; // ✅ 추가
 
 type RootStackParamList = {
   TicketDetail: { vc: any };
-  Ticket: undefined; // 돌아갈 스크린 타입 명시 (선택)
+  Ticket: undefined;
 };
 
 function TicketDetailScreen() {
   const route = useRoute<RouteProp<RootStackParamList, 'TicketDetail'>>();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const vc = route.params.vc;
-  const [vp, setVp] = React.useState<any | null>(null); // VP 객체 타입으로 변경
-  const [isModalVisible, setIsModalVisible] = React.useState(false); // 모달 표시 상태 관리
+  const [vp, setVp] = React.useState<any | null>(null);
+  const [isModalVisible, setIsModalVisible] = React.useState(false);
+  const [showQR, setShowQR] = React.useState(false); // ✅ QR 표시 상태
 
   const create_vp = async () => {
     const result = await createVP(vc);
-    setVp(result); // result는 VerifiablePresentation 객체
-    setIsModalVisible(true); // VP 생성 후 모달 표시
+    console.log(JSON.stringify(result, null, 2));
+    setVp(result);
+    setIsModalVisible(true);
+    setShowQR(false); // 초기엔 QR 숨김
   };
 
   const closeModal = () => {
-    setIsModalVisible(false); // 모달 닫기
+    setIsModalVisible(false);
+    setShowQR(false); // 닫을 때 QR도 초기화
+  };
+
+  const toggleQR = () => {
+    setShowQR((prev) => !prev); // ✅ QR 보기/숨기기 토글
   };
 
   return (
@@ -33,7 +42,6 @@ function TicketDetailScreen() {
         <Text style={styles.title}>티켓 상세 정보</Text>
         <Text style={styles.json}>{JSON.stringify(vc, null, 2)}</Text>
 
-        {/* 🔙 돌아가기 버튼 */}
         <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
           <Text style={styles.backButtonText}>← 목록으로 돌아가기</Text>
         </TouchableOpacity>
@@ -42,7 +50,6 @@ function TicketDetailScreen() {
         </TouchableOpacity>
       </ScrollView>
 
-      {/* 모달 추가 */}
       {vp && (
         <Modal
           transparent={true}
@@ -53,12 +60,23 @@ function TicketDetailScreen() {
           <View style={styles.modalOverlay}>
             <View style={styles.modalContainer}>
               <Text style={styles.modalTitle}>VP (VerifiablePresentation)</Text>
-              <ScrollView contentContainerStyle={styles.modalContent}>
-                <Text style={styles.json}>{JSON.stringify(vp, null, 2)}</Text>
-              </ScrollView>
-              <TouchableOpacity style={styles.closeButton} onPress={closeModal}>
-                <Text style={styles.closeButtonText}>QR 표시</Text>
+
+              {/* ✅ QR 표시 조건 */}
+              {showQR ? (
+                <View style={styles.qrContainer}>
+                  <QRCode value={JSON.stringify(vp)} size={200} />
+                </View>
+              ) : (
+                <ScrollView contentContainerStyle={styles.modalContent}>
+                  <Text style={styles.json}>{JSON.stringify(vp, null, 2)}</Text>
+                </ScrollView>
+              )}
+
+              {/* ✅ QR / JSON 보기 토글 버튼 */}
+              <TouchableOpacity style={styles.closeButton} onPress={toggleQR}>
+                <Text style={styles.closeButtonText}>{showQR ? 'JSON 보기' : 'QR 표시'}</Text>
               </TouchableOpacity>
+
               <TouchableOpacity style={styles.closeButton} onPress={closeModal}>
                 <Text style={styles.closeButtonText}>닫기</Text>
               </TouchableOpacity>
@@ -103,16 +121,15 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     alignItems: 'center',
   },
-  // 모달 스타일 추가
   modalOverlay: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.5)', // 투명 배경
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
   },
   modalContainer: {
-    width: '80%',
-    maxHeight: '80%', // 최대 높이 설정 (화면 크기 제한)
+    width: '85%',
+    maxHeight: '85%',
     padding: 20,
     backgroundColor: 'white',
     borderRadius: 10,
@@ -124,16 +141,20 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   modalContent: {
-    flexGrow: 1, // 컨텐츠가 길어지면 스크롤 가능하도록 설정
-    paddingBottom: 20, // 여유 공간을 줘서 스크롤이 되도록
+    flexGrow: 1,
+    paddingBottom: 20,
+  },
+  qrContainer: {
+    padding: 20,
+    alignItems: 'center',
   },
   closeButton: {
-    marginTop: 20,
+    marginTop: 10,
     backgroundColor: '#4D8AFF',
     paddingVertical: 10,
     borderRadius: 8,
     alignItems: 'center',
-    width : 100
+    width: 100,
   },
   closeButtonText: {
     color: 'white',
