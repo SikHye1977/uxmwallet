@@ -20,7 +20,7 @@ interface VerifiablePresentation {
     type: string;
     created: string;
     verificationMethod: string;
-    signatureValue: string;
+    jws: string;
   };
 }
 
@@ -70,7 +70,7 @@ export const createVP = async (vc: any) => {
     type: "Ed25519Signature2020",  // 서명 타입
     created: new Date().toISOString(),
     verificationMethod: "did:sov:4Lq1PHHxh2Pb8aFMQXr7N7#key-1", // DID 공개키를 나타내는 식별자
-    signatureValue: `${encodedHeader}..${encodedSignature}`  // JWS 서명 값
+    jws: `${encodedHeader}..${encodedSignature}`  // JWS 서명 값
   };
 
   // 서명된 VP 반환

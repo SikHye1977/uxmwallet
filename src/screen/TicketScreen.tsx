@@ -53,17 +53,6 @@ const dummyVC = {
     jws: "eyJhbGciOiJFZERTQSIsImI2NCI6ZmFsc2UsImNyaXQiOlsiYjY0Il19..XpWaDNkN8oVVmLoo6hEU45kIrwCZTU-c6LvIGpJh9okCFJ2AbrjWNKEi_jsesPtnswPVtmaUMGZVepVyONtMAA"
   }
 };
-
-const saveDummyVC = async () => {
-  try {
-    const ticketNumber = dummyVC.credentialSubject.ticketNumber;
-    const storageKey = `vc:${ticketNumber}`;
-    await setItem(storageKey, JSON.stringify(dummyVC));
-    console.log('✅ Dummy VC 저장 완료!');
-  } catch (error) {
-    console.error('❌ Dummy VC 저장 실패:', error);
-  }
-};
 /* test dummy code */
 
 
@@ -121,8 +110,7 @@ function TicketScreen() {
   }, [targetUrl]);
 
   /* test dummy code */
-  useEffect(() => {
-    const loadStoredVCs = async () => {
+  const loadStoredVCs = async () => {
       const keys = await AsyncStorage.getAllKeys();
       const vcKeys = keys.filter((key) => key.startsWith('vc:'));
   
@@ -136,8 +124,21 @@ function TicketScreen() {
       setVcList(vcData.filter(Boolean));
     };
   
+  useEffect(() => {
     loadStoredVCs();
   }, []);
+
+  const saveDummyVC = async () => {
+  try {
+    const ticketNumber = dummyVC.credentialSubject.ticketNumber;
+    const storageKey = `vc:${ticketNumber}`;
+    await setItem(storageKey, JSON.stringify(dummyVC));
+    console.log('✅ Dummy VC 저장 완료!');
+    await loadStoredVCs(); // ✅ 저장 후 다시 로드
+  } catch (error) {
+    console.error('❌ Dummy VC 저장 실패:', error);
+  }
+};
   /* test dummy code */
 
   const handleDeleteTicket = async (ticketNumber: string) => {
@@ -182,6 +183,9 @@ function TicketScreen() {
               </Text>
             </TouchableOpacity>
           )}
+          <TouchableOpacity onPress={saveDummyVC}>
+            <Text>더미 데이터 추가</Text>
+          </TouchableOpacity>
         </View>
       </ScrollView>
     </SafeAreaView>
