@@ -3,7 +3,7 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 54;
+	objectVersion = 70;
 	objects = {
 
 /* Begin PBXBuildFile section */
@@ -51,6 +51,10 @@
 		ED297162215061F000B7C4FE /* JavaScriptCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = JavaScriptCore.framework; path = System/Library/Frameworks/JavaScriptCore.framework; sourceTree = SDKROOT; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedRootGroup section */
+		9066AD752DD84A0500611DB8 /* context */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = context; sourceTree = "<group>"; };
+/* End PBXFileSystemSynchronizedRootGroup section */
+
 /* Begin PBXFrameworksBuildPhase section */
 		00E356EB1AD99517003FC87E /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
@@ -91,6 +95,7 @@
 		13B07FAE1A68108700A75B9A /* uxmwallet */ = {
 			isa = PBXGroup;
 			children = (
+				9066AD752DD84A0500611DB8 /* context */,
 				902BA2302DD841B300B70DA9 /* genesis 2.txn */,
 				90A4C7332D775BDC00788635 /* uxmwallet.entitlements */,
 				13B07FAF1A68108700A75B9A /* AppDelegate.h */,
@@ -197,6 +202,9 @@
 			buildRules = (
 			);
 			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				9066AD752DD84A0500611DB8 /* context */,
 			);
 			name = uxmwallet;
 			productName = uxmwallet;
