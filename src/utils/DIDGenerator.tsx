@@ -179,7 +179,7 @@ export async function addX25519PublicKey(submitterDid: string, targetDid: string
 // 25.04.09추가
 // 프로젝트 에셋에 제네시스 파일 추가 및 읽어오기
 async function copyGenesisFileToAppStorage(): Promise<string> {
-  const fileName = 'genesis.txn';
+  const fileName = 'genesis 2.txn';
   const destPath = `${RNFS.DocumentDirectoryPath}/${fileName}`;
 
   const fileExists = await RNFS.exists(destPath);

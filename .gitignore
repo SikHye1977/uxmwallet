@@ -67,6 +67,9 @@ yarn-error.log
 
 # env file
 .env
+/ios/genesis.txn
+/ios/genesis 2.txn
+
 
 # genesis txn
 /src/misc/

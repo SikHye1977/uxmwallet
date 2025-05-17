@@ -89,6 +89,12 @@ function ProfileScreen() {
       await removeItem('edSecretkey');
       await removeItem('xVerkey');
       await removeItem('xSecretkey');
+
+      setDid(null);
+      setEdVerkey(null);
+      setEdSecretkey(null);
+      setXVerkey(null);
+      setXSecretkey(null);
       Alert.alert('삭제 성공', '디바이스에 저장된 DID를 삭제했습니다.');
     } catch (error) {
       console.error('삭제 실패:', error);

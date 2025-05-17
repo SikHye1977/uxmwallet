@@ -26,12 +26,15 @@ interface VerifiablePresentation {
 
 // VP를 Detached JWS 형식으로 서명하는 함수
 export const createVP = async (vc: any) => {
+  const userDid = await getItem('DID');
+
   // VP 데이터 구성
   const vp: VerifiablePresentation = {
     "@context": ["https://www.w3.org/2018/credentials/v1"],
     "type": ["VerifiablePresentation"],
     "verifiableCredential": [vc],
-    "holder": "did:sov:4Lq1PHHxh2Pb8aFMQXr7N7", // DID 추가
+    // "holder": "did:sov:4Lq1PHHxh2Pb8aFMQXr7N7", // DID 추가
+    "holder" : `did:sov:${userDid}`,
   };
 
   // VP를 canonicalize하여 정렬된 JSON-LD 문자열 생성

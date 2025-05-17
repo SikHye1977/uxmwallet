@@ -14,8 +14,8 @@
 		13B07FC11A68108700A75B9A /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = 13B07FB71A68108700A75B9A /* main.m */; };
 		7699B88040F8A987B510C191 /* libPods-uxmwallet-uxmwalletTests.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 19F6CBCC0A4E27FBF8BF4A61 /* libPods-uxmwallet-uxmwalletTests.a */; };
 		81AB9BB82411601600AC10FF /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */; };
+		902BA2312DD841B300B70DA9 /* genesis 2.txn in Resources */ = {isa = PBXBuildFile; fileRef = 902BA2302DD841B300B70DA9 /* genesis 2.txn */; };
 		90A4C7322D77599900788635 /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = 90A4C7312D77599900788635 /* GoogleService-Info.plist */; };
-		90B5F9B12DA6B1B60087B347 /* genesis.txn in Resources */ = {isa = PBXBuildFile; fileRef = 90B5F9B02DA6B1B60087B347 /* genesis.txn */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -45,9 +45,9 @@
 		5DCACB8F33CDC322A6C60F78 /* libPods-uxmwallet.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-uxmwallet.a"; sourceTree = BUILT_PRODUCTS_DIR; };
 		81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.storyboard; name = LaunchScreen.storyboard; path = uxmwallet/LaunchScreen.storyboard; sourceTree = "<group>"; };
 		89C6BE57DB24E9ADA2F236DE /* Pods-uxmwallet-uxmwalletTests.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-uxmwallet-uxmwalletTests.release.xcconfig"; path = "Target Support Files/Pods-uxmwallet-uxmwalletTests/Pods-uxmwallet-uxmwalletTests.release.xcconfig"; sourceTree = "<group>"; };
+		902BA2302DD841B300B70DA9 /* genesis 2.txn */ = {isa = PBXFileReference; lastKnownFileType = text; path = "genesis 2.txn"; sourceTree = "<group>"; };
 		90A4C7312D77599900788635 /* GoogleService-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
 		90A4C7332D775BDC00788635 /* uxmwallet.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; name = uxmwallet.entitlements; path = uxmwallet/uxmwallet.entitlements; sourceTree = "<group>"; };
-		90B5F9B02DA6B1B60087B347 /* genesis.txn */ = {isa = PBXFileReference; lastKnownFileType = text; path = genesis.txn; sourceTree = "<group>"; };
 		ED297162215061F000B7C4FE /* JavaScriptCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = JavaScriptCore.framework; path = System/Library/Frameworks/JavaScriptCore.framework; sourceTree = SDKROOT; };
 /* End PBXFileReference section */
 
@@ -91,6 +91,7 @@
 		13B07FAE1A68108700A75B9A /* uxmwallet */ = {
 			isa = PBXGroup;
 			children = (
+				902BA2302DD841B300B70DA9 /* genesis 2.txn */,
 				90A4C7332D775BDC00788635 /* uxmwallet.entitlements */,
 				13B07FAF1A68108700A75B9A /* AppDelegate.h */,
 				13B07FB01A68108700A75B9A /* AppDelegate.mm */,
@@ -99,7 +100,6 @@
 				81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */,
 				13B07FB71A68108700A75B9A /* main.m */,
 				90A4C7312D77599900788635 /* GoogleService-Info.plist */,
-				90B5F9B02DA6B1B60087B347 /* genesis.txn */,
 			);
 			name = uxmwallet;
 			sourceTree = "<group>";
@@ -252,7 +252,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				81AB9BB82411601600AC10FF /* LaunchScreen.storyboard in Resources */,
-				90B5F9B12DA6B1B60087B347 /* genesis.txn in Resources */,
+				902BA2312DD841B300B70DA9 /* genesis 2.txn in Resources */,
 				13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */,
 				90A4C7322D77599900788635 /* GoogleService-Info.plist in Resources */,
 			);
