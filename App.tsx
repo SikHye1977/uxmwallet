@@ -1,6 +1,6 @@
-import React, { useEffect } from 'react';
-import { NavigationContainer } from '@react-navigation/native';
-import { StyleSheet } from 'react-native';
+import React, {useEffect} from 'react';
+import {NavigationContainer} from '@react-navigation/native';
+import {StyleSheet} from 'react-native';
 import {
   getMessaging,
   onMessage,
@@ -8,16 +8,16 @@ import {
   onNotificationOpenedApp,
   getInitialNotification,
 } from '@react-native-firebase/messaging';
-import { getApp } from '@react-native-firebase/app';
+import {getApp} from '@react-native-firebase/app';
 
-import { setItem, getItem } from './src/utils/AsyncStorage';
+import {setItem} from './src/utils/AsyncStorage';
+import {get_VC} from './src/utils/GetVC'; // ✅ VC 발급 요청 함수 import
 import RootNavigator from './src/navigation/RootNavigator';
-import { createNavigationContainerRef } from '@react-navigation/native';
-import { RootStackParamList } from './src/navigation/types';
+import {createNavigationContainerRef} from '@react-navigation/native';
+import {RootStackParamList} from './src/navigation/types';
 
 const FCM_TOKEN_KEY = 'fcmToken';
 
-// ✅ navigationRef에 타입 지정
 export const navigationRef = createNavigationContainerRef<RootStackParamList>();
 
 const linking = {
@@ -47,10 +47,9 @@ const linking = {
   },
 };
 
-// ✅ FCM 메시징 인스턴스
 const messaging = getMessaging(getApp());
 
-setBackgroundMessageHandler(messaging, async (remoteMessage) => {
+setBackgroundMessageHandler(messaging, async remoteMessage => {
   console.log('[Background Message]', remoteMessage);
 });
 
@@ -68,27 +67,42 @@ const App = () => {
   useEffect(() => {
     requestUserPermission();
 
-    const handleNotification = (remoteMessage: any) => {
+    const handleNotification = async (remoteMessage: any) => {
       const targetUrl = remoteMessage?.data?.target_url;
-      if (targetUrl && navigationRef.isReady()) {
-        console.log('🔗 Navigating with target_url:', targetUrl);
-        navigationRef.navigate('MainTabs', {
-          screen: 'Ticket',
-          params: { targetUrl },
-        });
+
+      if (targetUrl) {
+        try {
+          const result = await get_VC(targetUrl);
+          console.log(
+            '🧾 [FCM 클릭 → VC 발급 결과]:',
+            JSON.stringify(result, null, 2),
+          );
+        } catch (err) {
+          console.error('❌ VC 가져오기 실패:', err);
+        }
+
+        if (navigationRef.isReady()) {
+          navigationRef.navigate('MainTabs', {
+            screen: 'Ticket',
+            params: {targetUrl},
+          });
+        }
       }
     };
 
-    const unsubscribeOnMessage = onMessage(messaging, async (remoteMessage) => {
+    const unsubscribeOnMessage = onMessage(messaging, async remoteMessage => {
       console.log('[Foreground Message]', remoteMessage);
     });
 
-    const unsubscribeOnNotificationOpened = onNotificationOpenedApp(messaging, (remoteMessage) => {
-      console.log('[Background 클릭 → 앱 열림]', remoteMessage);
-      handleNotification(remoteMessage);
-    });
+    const unsubscribeOnNotificationOpened = onNotificationOpenedApp(
+      messaging,
+      remoteMessage => {
+        console.log('[Background 클릭 → 앱 열림]', remoteMessage);
+        handleNotification(remoteMessage);
+      },
+    );
 
-    getInitialNotification(messaging).then((remoteMessage) => {
+    getInitialNotification(messaging).then(remoteMessage => {
       if (remoteMessage) {
         console.log('[앱 종료 상태에서 알림 클릭 → 첫 실행]', remoteMessage);
         handleNotification(remoteMessage);

@@ -1,24 +1,34 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Modal } from 'react-native';
-import { useRoute, RouteProp, useNavigation } from '@react-navigation/native';
-import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { createVP } from '../utils/VPGenerator';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  Modal,
+} from 'react-native';
+import {useRoute, RouteProp, useNavigation} from '@react-navigation/native';
+import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
+import {SafeAreaView} from 'react-native-safe-area-context';
+import {createVP} from '../utils/VPGenerator';
 import QRCode from 'react-native-qrcode-svg'; // ✅ 추가
-import { compressVP } from '../utils/VPCompressor';
+import {compressVP} from '../utils/VPCompressor';
 
 type RootStackParamList = {
-  TicketDetail: { vc: any };
+  TicketDetail: {vc: any};
   Ticket: undefined;
-  FullscreenQR: { value: string }; // 전체화면
+  FullscreenQR: {value: string}; // 전체화면
 };
 
 function TicketDetailScreen() {
   const route = useRoute<RouteProp<RootStackParamList, 'TicketDetail'>>();
-  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const navigation =
+    useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const vc = route.params.vc;
   const [vp, setVp] = React.useState<any | null>(null);
-  const [compressedQRData, setCompressedQRData] = React.useState<string | null>(null); // 압축된 VP
+  const [compressedQRData, setCompressedQRData] = React.useState<string | null>(
+    null,
+  ); // 압축된 VP
   const [isModalVisible, setIsModalVisible] = React.useState(false);
   const [showQR, setShowQR] = React.useState(false); // ✅ QR 표시 상태
 
@@ -46,34 +56,58 @@ function TicketDetailScreen() {
       }
     }
 
-    setShowQR((prev) => !prev);
+    setShowQR(prev => !prev);
   };
 
-  const hello = () => {
-    console.log(hello);
-  }
-
   return (
-    <SafeAreaView>
-      <ScrollView contentContainerStyle={styles.container}>
-        <Text style={styles.title}>티켓 상세 정보</Text>
-        <Text style={styles.json}>{JSON.stringify(vc, null, 2)}</Text>
+    <SafeAreaView style={styles.safeArea}>
+      <View style={styles.contentWrapper}>
+        <ScrollView contentContainerStyle={styles.scrollContent}>
+          <Text style={styles.title}>티켓 상세 정보</Text>
+          {vc?.credential?.credentialSubject ? (
+            <View style={styles.ticketInfoBox}>
+              <Text style={styles.ticketInfoText}>
+                티켓 번호 : {vc.credential.credentialSubject.ticketNumber}
+              </Text>
+              <Text style={styles.ticketInfoText}>
+                발급자 : {vc.credential.credentialSubject.issuedBy.name}
+              </Text>
+              <Text style={styles.ticketInfoText}>
+                소유자 : {vc.credential.credentialSubject.underName.name}
+              </Text>
+              <Text style={styles.ticketInfoText}>
+                소유자 ID : {vc.credential.credentialSubject.underName.id}
+              </Text>
 
-        <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-          <Text style={styles.backButtonText}>← 목록으로 돌아가기</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.Button} onPress={create_vp}>
-          <Text style={styles.backButtonText}>VP 생성</Text>
-        </TouchableOpacity>
-      </ScrollView>
+              {/* 전체 JSON 보기 */}
+              <Text style={styles.jsonText}>{JSON.stringify(vc, null, 2)}</Text>
+            </View>
+          ) : (
+            <Text style={styles.ticketInfoText}>
+              VC 데이터를 불러오는 중입니다...
+            </Text>
+          )}
+        </ScrollView>
+
+        {/* ✅ 하단 고정 버튼 영역 */}
+        <View style={styles.bottomButtons}>
+          <TouchableOpacity style={styles.Button} onPress={create_vp}>
+            <Text style={styles.backButtonText}>VP 생성</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => navigation.goBack()}>
+            <Text style={styles.backButtonText}>← 목록으로 돌아가기</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
 
       {vp && (
         <Modal
           transparent={true}
           visible={isModalVisible}
           animationType="slide"
-          onRequestClose={closeModal}
-        >
+          onRequestClose={closeModal}>
           <View style={styles.modalOverlay}>
             <View style={styles.modalContainer}>
               <Text style={styles.modalTitle}>VP (VerifiablePresentation)</Text>
@@ -82,28 +116,36 @@ function TicketDetailScreen() {
               {showQR ? (
                 <View style={styles.qrContainer}>
                   {compressedQRData ? (
-                  <>
-                  <QRCode value={compressedQRData} size={200} />
-                  <TouchableOpacity
-                    style={styles.fullscreenButton}
-                    onPress={() => navigation.navigate('FullscreenQR', { value: compressedQRData })}
-                  >
-                    <Text style={styles.fullscreenButtonText}>전체화면 보기</Text>
-                  </TouchableOpacity>
-                  </>
+                    <>
+                      <QRCode value={compressedQRData} size={200} />
+                      <TouchableOpacity
+                        style={styles.fullscreenButton}
+                        onPress={() => {
+                          setIsModalVisible(false);
+                          navigation.navigate('FullscreenQR', {
+                            value: compressedQRData,
+                          });
+                        }}>
+                        <Text style={styles.fullscreenButtonText}>
+                          전체화면 보기
+                        </Text>
+                      </TouchableOpacity>
+                    </>
                   ) : (
                     <Text>압축 중...</Text>
                   )}
                 </View>
               ) : (
-              <ScrollView contentContainerStyle={styles.modalContent}>
-                <Text style={styles.json}>{JSON.stringify(vp, null, 2)}</Text>
-              </ScrollView>
+                <ScrollView contentContainerStyle={styles.modalContent}>
+                  <Text style={styles.json}>{JSON.stringify(vp, null, 2)}</Text>
+                </ScrollView>
               )}
 
               {/* ✅ QR / JSON 보기 토글 버튼 */}
               <TouchableOpacity style={styles.closeButton} onPress={toggleQR}>
-                <Text style={styles.closeButtonText}>{showQR ? 'JSON 보기' : 'QR 표시'}</Text>
+                <Text style={styles.closeButtonText}>
+                  {showQR ? 'JSON 보기' : 'QR 표시'}
+                </Text>
               </TouchableOpacity>
               <TouchableOpacity style={styles.closeButton} onPress={closeModal}>
                 <Text style={styles.closeButtonText}>닫기</Text>
@@ -133,6 +175,7 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   backButton: {
+    marginTop: 10,
     backgroundColor: '#4D8AFF',
     paddingVertical: 12,
     borderRadius: 8,
@@ -143,7 +186,6 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   Button: {
-    marginTop: 10,
     backgroundColor: '#4D8AFF',
     paddingVertical: 12,
     borderRadius: 8,
@@ -189,16 +231,50 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   fullscreenButton: {
-  marginTop: 10,
-  backgroundColor: '#333',
-  paddingVertical: 10,
-  borderRadius: 8,
-  alignItems: 'center',
-  width: 150,
+    marginTop: 10,
+    backgroundColor: '#333',
+    paddingVertical: 10,
+    borderRadius: 8,
+    alignItems: 'center',
+    width: 150,
   },
   fullscreenButtonText: {
     color: 'white',
     fontWeight: 'bold',
+  },
+  ticketInfoBox: {
+    marginVertical: 12,
+    padding: 16,
+    backgroundColor: '#f1f5ff',
+    borderRadius: 10,
+  },
+  ticketInfoText: {
+    fontSize: 14,
+    marginBottom: 8,
+    color: '#333',
+  },
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#fff',
+  },
+  contentWrapper: {
+    flex: 1,
+    justifyContent: 'space-between',
+  },
+  scrollContent: {
+    padding: 20,
+    paddingBottom: 40,
+  },
+  bottomButtons: {
+    padding: 16,
+    borderTopWidth: 1,
+    borderColor: '#eee',
+    backgroundColor: '#fff',
+  },
+  jsonText: {
+    fontSize: 12,
+    fontFamily: 'Courier',
+    color: '#333',
   },
 });
 

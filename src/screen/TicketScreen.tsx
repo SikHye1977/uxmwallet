@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, {useEffect, useState} from 'react';
 import {
   StyleSheet,
   Text,
@@ -7,10 +7,10 @@ import {
   ScrollView,
   TouchableOpacity,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { RouteProp, useRoute } from '@react-navigation/native';
-import { get_VC } from '../utils/GetVC';
-import { getItem, setItem, removeItem } from '../utils/AsyncStorage';
+import {SafeAreaView} from 'react-native-safe-area-context';
+import {RouteProp, useRoute} from '@react-navigation/native';
+import {get_VC} from '../utils/GetVC';
+import {getItem, setItem, removeItem} from '../utils/AsyncStorage';
 import VCcard from '../component/VCcard';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -19,42 +19,6 @@ type TicketRouteParamList = {
     targetUrl?: string;
   };
 };
-
-// 25.05.14 test code
-/* test dummy code */
-const dummyVC = {
-  "@context": [
-    "https://www.w3.org/2018/credentials/v1",
-    "https://schema.org/docs/jsonldcontext.jsonld"
-  ],
-  id: "6c468803-8161-40cf-8ba0-941551479c2c",
-  type: ["VerifiableCredential", "Ticket"],
-  issuer: "did:sov:VV9pK5ZrLPRwYmotgACPkC",
-  issuanceDate: "2025-05-12T04:49:55.867Z",
-  expirationDate: "2025-02-10T15:00:00.000Z",
-  credentialSubject: {
-    id: "8Qw6PdG3RFJky21Xkuwyuh",
-    ticketNumber: "824a58a7-31d5-4672-b3c3-22adc7584185",
-    ticketToken: "vcData.reservedTicket.ticketToken",
-    issuedBy: {
-      name: "GD 단독 콘서트",
-      id: "did:sov:VV9pK5ZrLPRwYmotgACPkC"
-    },
-    underName: {
-      name: "8Qw6PdG3RFJky21Xkuwyuh",
-      id: "8Qw6PdG3RFJky21Xkuwyuh"
-    }
-  },
-  proof: {
-    type: "Ed25519Signature2020",
-    created: "2025-05-12T04:49:55.886Z",
-    proofPurpose: "assertionMethod",
-    verificationMethod: "GXUnLHyrYogGzyeiFLXdLv9EjEy8ZJN7XFnuSuN3Dn9M#keys-1",
-    jws: "eyJhbGciOiJFZERTQSIsImI2NCI6ZmFsc2UsImNyaXQiOlsiYjY0Il19..XpWaDNkN8oVVmLoo6hEU45kIrwCZTU-c6LvIGpJh9okCFJ2AbrjWNKEi_jsesPtnswPVtmaUMGZVepVyONtMAA"
-  }
-};
-/* test dummy code */
-
 
 function TicketScreen() {
   const route = useRoute<RouteProp<TicketRouteParamList, 'Ticket'>>();
@@ -73,8 +37,8 @@ function TicketScreen() {
       const result = await get_VC(targetUrl);
       console.log('🧾 VC 응답 전체:', JSON.stringify(result, null, 2));
 
-      const ticketNumber =
-        result?.vc?.credential?.credentialSubject?.reservedTicket?.ticketNumber;
+      const vc = result?.vc;
+      const ticketNumber = vc?.credential?.credentialSubject?.ticketNumber;
 
       if (!ticketNumber) {
         console.warn('❗ ticketNumber 없음 (응답 구조 확인 필요)');
@@ -89,18 +53,18 @@ function TicketScreen() {
       if (stored) {
         newVC = JSON.parse(stored);
       } else {
-        newVC = result.vc;
+        newVC = vc;
         await setItem(storageKey, JSON.stringify(newVC));
+        console.log(`setItem... ${storageKey} : ${JSON.stringify(newVC)}`);
       }
 
       const alreadyExists = vcList.some(
-        (vc) =>
-          vc?.credential?.credentialSubject?.reservedTicket?.ticketNumber ===
-          ticketNumber
+        item =>
+          item?.credential?.credentialSubject?.ticketNumber === ticketNumber,
       );
 
       if (!alreadyExists) {
-        setVcList((prevList) => [...prevList, newVC]);
+        setVcList(prevList => [...prevList, newVC]);
       }
 
       setLoading(false);
@@ -109,48 +73,39 @@ function TicketScreen() {
     fetchOrLoadVC();
   }, [targetUrl]);
 
-  /* test dummy code */
-  const loadStoredVCs = async () => {
+  useEffect(() => {
+    const loadStoredVCs = async () => {
       const keys = await AsyncStorage.getAllKeys();
-      const vcKeys = keys.filter((key) => key.startsWith('vc:'));
-  
+      const vcKeys = keys.filter(key => key.startsWith('vc:'));
+
       const vcData = await Promise.all(
-        vcKeys.map(async (key) => {
+        vcKeys.map(async key => {
           const stored = await getItem(key);
           return stored ? JSON.parse(stored) : null;
-        })
+        }),
       );
-  
-      setVcList(vcData.filter(Boolean));
+
+      // ❗ ticketNumber가 없는 잘못된 VC는 제외
+      const filtered = vcData.filter(
+        vc => vc?.credential?.credentialSubject?.ticketNumber,
+      );
+
+      setVcList(filtered);
     };
-  
-  useEffect(() => {
+
     loadStoredVCs();
   }, []);
-
-  const saveDummyVC = async () => {
-  try {
-    const ticketNumber = dummyVC.credentialSubject.ticketNumber;
-    const storageKey = `vc:${ticketNumber}`;
-    await setItem(storageKey, JSON.stringify(dummyVC));
-    console.log('✅ Dummy VC 저장 완료!');
-    await loadStoredVCs(); // ✅ 저장 후 다시 로드
-  } catch (error) {
-    console.error('❌ Dummy VC 저장 실패:', error);
-  }
-};
-  /* test dummy code */
 
   const handleDeleteTicket = async (ticketNumber: string) => {
     const storageKey = `vc:${ticketNumber}`;
     await removeItem(storageKey);
-    setVcList((prevList) =>
+
+    setVcList(prevList =>
       prevList.filter(
-        (vc) =>
-          vc?.credential?.credentialSubject?.reservedTicket?.ticketNumber !==
-          ticketNumber
-      )
+        vc => vc?.credential?.credentialSubject?.ticketNumber !== ticketNumber,
+      ),
     );
+
     setIsDeleteMode(false);
   };
 
@@ -176,16 +131,12 @@ function TicketScreen() {
           {vcList.length > 0 && (
             <TouchableOpacity
               style={styles.deleteButton}
-              onPress={() => setIsDeleteMode(!isDeleteMode)}
-            >
+              onPress={() => setIsDeleteMode(!isDeleteMode)}>
               <Text style={styles.deleteButtonText}>
                 {isDeleteMode ? '삭제 취소' : '티켓 삭제하기'}
               </Text>
             </TouchableOpacity>
           )}
-          <TouchableOpacity onPress={saveDummyVC}>
-            <Text>더미 데이터 추가</Text>
-          </TouchableOpacity>
         </View>
       </ScrollView>
     </SafeAreaView>

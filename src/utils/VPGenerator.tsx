@@ -1,7 +1,7 @@
 import * as nacl from 'tweetnacl';
 import base64url from 'base64url';
 import bs58 from 'bs58';
-import { getItem } from './AsyncStorage';
+import {getItem} from './AsyncStorage';
 
 const canonicalize = require('canonicalize') as (input: any) => string;
 
@@ -12,7 +12,7 @@ export function canonicalizeJsonLd(input: any): string {
 
 // VP의 타입을 정의
 interface VerifiablePresentation {
-  "@context": string[];
+  '@context': string[];
   type: string[];
   verifiableCredential: any[];
   holder: string;
@@ -30,11 +30,17 @@ export const createVP = async (vc: any) => {
 
   // VP 데이터 구성
   const vp: VerifiablePresentation = {
-    "@context": ["https://www.w3.org/2018/credentials/v1"],
-    "type": ["VerifiablePresentation"],
-    "verifiableCredential": [vc],
+    '@context': ['https://www.w3.org/2018/credentials/v1'],
+    type: ['VerifiablePresentation'],
+    verifiableCredential: [
+      {
+        ...vc.credential,
+        proof: vc.proof, // proof 필드 다시 붙이기
+      },
+    ],
+    // verifiableCredential: [vc],
     // "holder": "did:sov:4Lq1PHHxh2Pb8aFMQXr7N7", // DID 추가
-    "holder" : `did:sov:${userDid}`,
+    holder: `did:sov:${userDid}`,
   };
 
   // VP를 canonicalize하여 정렬된 JSON-LD 문자열 생성
@@ -49,28 +55,33 @@ export const createVP = async (vc: any) => {
   // Detached JWS header 생성
   const header = {
     alg: 'EdDSA', // Ed25519 알고리즘
-    b64: false,   // Payload를 base64url 인코딩하지 않음
+    b64: false, // Payload를 base64url 인코딩하지 않음f
     crit: ['b64'], // b64 필드는 필수 항목
   };
-  
+
   // Header를 base64url로 인코딩
   const encodedHeader = base64url.encode(JSON.stringify(header));
-  
+
   // 서명할 입력값 생성 (header.payload 형태)
-  const signingInput = new TextEncoder().encode(`${encodedHeader}.${base64url.encode(canonicalizedPayload)}`);
-  
+  const signingInput = new TextEncoder().encode(
+    `${encodedHeader}.${base64url.encode(canonicalizedPayload)}`,
+  );
+
   // Ed25519로 서명 생성
   const signature = nacl.sign.detached(signingInput, privateKey);
 
   // 서명값을 base64url로 인코딩
   const encodedSignature = base64url.encode(Buffer.from(signature));
 
+  const did = await getItem('DID');
+
+  const verificationMethod = `did:sov:${did}#key-1`;
   // VP의 proof 필드에 서명 추가
   vp.proof = {
-    type: "Ed25519Signature2020",  // 서명 타입
+    type: 'Ed25519Signature2020', // 서명 타입
     created: new Date().toISOString(),
-    verificationMethod: "did:sov:4Lq1PHHxh2Pb8aFMQXr7N7#key-1", // DID 공개키를 나타내는 식별자
-    jws: `${encodedHeader}..${encodedSignature}`  // JWS 서명 값
+    verificationMethod, // DID 공개키를 나타내는 식별자
+    jws: `${encodedHeader}..${encodedSignature}`, // JWS 서명 값
   };
 
   // 서명된 VP 반환

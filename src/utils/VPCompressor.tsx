@@ -1,6 +1,6 @@
 // utils/compressVP.ts
-import { gzip } from 'pako';
-import { Buffer } from 'buffer';
+import {gzip} from 'pako';
+import {Buffer} from 'buffer';
 
 /**
  * VP 객체에서 '@context'와 'type' 필드를 재귀적으로 제거
@@ -45,12 +45,14 @@ export const compressVP = (vp: any): string => {
   const jsonStr = JSON.stringify(sorted);
   const originalSize = Buffer.byteLength(jsonStr, 'utf8');
 
-  const compressed = gzip(jsonStr, { level: 9 });
+  const compressed = gzip(jsonStr, {level: 9});
   const compressedSize = compressed.length;
 
   console.log(`📦 압축 전 크기: ${originalSize} bytes`);
   console.log(`📉 압축 후 크기: ${compressedSize} bytes`);
-  console.log(`🪶 압축률: ${(100 - (compressedSize / originalSize) * 100).toFixed(2)}%`);
-
+  console.log(
+    `🪶 압축률: ${(100 - (compressedSize / originalSize) * 100).toFixed(2)}%`,
+  );
+  console.log(Buffer.from(compressed).toString('base64'));
   return Buffer.from(compressed).toString('base64');
 };
