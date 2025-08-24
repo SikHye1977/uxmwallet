@@ -15,6 +15,8 @@ import {get_VC} from './src/utils/GetVC'; // ✅ VC 발급 요청 함수 import
 import RootNavigator from './src/navigation/RootNavigator';
 import {createNavigationContainerRef} from '@react-navigation/native';
 import {RootStackParamList} from './src/navigation/types';
+// 25.08.20 추가
+import {updateStatusListCid} from './src/utils/AsyncStorage';
 
 const FCM_TOKEN_KEY = 'fcmToken';
 
@@ -68,6 +70,24 @@ const App = () => {
     requestUserPermission();
 
     const handleNotification = async (remoteMessage: any) => {
+      // 25.08.20 추가
+      const ticketId = remoteMessage?.data?.ticketId;
+      const cid = remoteMessage?.data?.cid;
+
+      if (ticketId && cid) {
+        try {
+          const res = await updateStatusListCid(ticketId, cid);
+          console.log('[VC] status cid update result:', res);
+        } catch (e) {
+          console.error('[VC] status cid update failed:', e);
+        }
+
+        if (navigationRef.isReady()) {
+          navigationRef.navigate('MainTabs', {screen: 'Ticket'});
+        }
+        return; // 여기서 종료
+      }
+
       const targetUrl = remoteMessage?.data?.target_url;
 
       if (targetUrl) {
