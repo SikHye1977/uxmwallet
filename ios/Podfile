@@ -37,6 +37,9 @@ target 'uxmwallet' do
     :app_path => "#{Pod::Config.instance.installation_root}/.."
   )
 
+  # 25.09.16 카메라 추가를 위해
+  pod 'react-native-camera', :path => '../node_modules/react-native-camera'
+
   target 'uxmwalletTests' do
     inherit! :complete
     # Pods for testing

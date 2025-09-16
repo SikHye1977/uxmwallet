@@ -61,6 +61,8 @@
 	</dict>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string></string>
+	<!-- 25.09.16 추가 카메라 권한 -->
+	<key>NSCameraUsageDescription</key> <string>카메라를 사용하여 QR코드를 찍습니다.</string>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>remote-notification</string>
