@@ -22,6 +22,7 @@ type RootStackParamList = {
   TicketDetail: {vc: any};
   Ticket: undefined;
   FullscreenQR: {value: string};
+  Camera: {vp: any};
 };
 
 function TicketDetailScreen() {
@@ -49,26 +50,13 @@ function TicketDetailScreen() {
 
   // 2025.09.07 추가
   // 검증방식 개선을 위한 데모
+  // 2안은 보안상 문제로 삭제
 
   // 1안
-
-  // 2안
-  function encodeBase64(input: string): string {
-    return Buffer.from(input, 'utf-8').toString('base64');
-  }
-
-  const create_FCM_QR = async () => {
-    // 하드코딩, 개선 필요
-    const FCM = await getItem('fcmToken');
-    const FCM_Token = encodeBase64(FCM);
-    if (FCM_Token) {
-      console.log('encoded FCM Token:', FCM_Token);
-      setCompressedQRData(FCM_Token);
-      setIsModalVisible(true);
-      setShowQR(true);
-    } else {
-      console.warn('저장된 FCM 토큰이 없습니다.');
-    }
+  // 카메라를 켜서 OID4VP QR을 스캔하게 만들기
+  const openCameraComponent = async () => {
+    const vp = await createVP(vc);
+    navigation.navigate('Camera', {vp});
   };
 
   const closeModal = () => {
@@ -127,11 +115,8 @@ function TicketDetailScreen() {
           </TouchableOpacity>
           {/* 2025.09.07 추가 */}
           {/* 검증방식 개선을 위한 데모 */}
-          <TouchableOpacity style={styles.Button} onPress={create_vp}>
-            <Text style={styles.backButtonText}>검증하기 1안</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.Button} onPress={create_FCM_QR}>
-            <Text style={styles.backButtonText}>검증하기 2안</Text>
+          <TouchableOpacity style={styles.Button} onPress={openCameraComponent}>
+            <Text style={styles.backButtonText}>티켓 검증하기</Text>
           </TouchableOpacity>
           {/* 검증방식 개선을 위한 데모 */}
           <TouchableOpacity

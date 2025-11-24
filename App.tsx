@@ -91,15 +91,15 @@ const App = () => {
       const targetUrl = remoteMessage?.data?.target_url;
 
       if (targetUrl) {
-        try {
-          const result = await get_VC(targetUrl);
-          console.log(
-            '🧾 [FCM 클릭 → VC 발급 결과]:',
-            JSON.stringify(result, null, 2),
-          );
-        } catch (err) {
-          console.error('❌ VC 가져오기 실패:', err);
-        }
+        // try {
+        //   const result = await get_VC(targetUrl);
+        //   console.log(
+        //     '🧾 [FCM 클릭 → VC 발급 결과]:',
+        //     JSON.stringify(result, null, 2),
+        //   );
+        // } catch (err) {
+        //   console.error('❌ VC 가져오기 실패:', err);
+        // }
 
         if (navigationRef.isReady()) {
           navigationRef.navigate('MainTabs', {

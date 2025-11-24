@@ -1,9 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import React, {useState, useEffect} from 'react';
 import {StyleSheet, Text, View, Alert} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { TouchableOpacity } from 'react-native';
-import { removeItem, setItem, getItem } from '../utils/AsyncStorage';
-import { generateSeparateKeyPairs, registerDID, addX25519PublicKey } from '../utils/DIDGenerator';
+import {SafeAreaView} from 'react-native-safe-area-context';
+import {TouchableOpacity} from 'react-native';
+import {removeItem, setItem, getItem} from '../utils/AsyncStorage';
+import {
+  generateSeparateKeyPairs,
+  registerDID,
+  addX25519PublicKey,
+} from '../utils/DIDGenerator';
 
 function ProfileScreen() {
   const [did, setDid] = useState<any>(null);
@@ -11,6 +15,7 @@ function ProfileScreen() {
   const [Edsecretkey, setEdSecretkey] = useState<string | null>(null);
   const [Xverkey, setXVerkey] = useState<string | null>(null);
   const [Xsecretkey, setXSecretkey] = useState<string | null>(null);
+  const [token, setToken] = useState<string | null>(null);
 
   // 25.02.10 indy vdr 활용해서 DID 등록하게 변경
   // 25.03.18 x25519 키페어 추가
@@ -24,11 +29,11 @@ function ProfileScreen() {
     setXSecretkey(result_did.x25519PrivateKey);
 
     await setItem('DID', result_did.did);
-    await setItem('edVerkey',result_did.edPublicKey);
-    await setItem('edSecretkey',result_did.edPrivateKey);
+    await setItem('edVerkey', result_did.edPublicKey);
+    await setItem('edSecretkey', result_did.edPrivateKey);
     await setItem('xVerkey', result_did.x25519PublicKey);
-    await setItem('xSecretkey',result_did.x25519PrivateKey);
-  }
+    await setItem('xSecretkey', result_did.x25519PrivateKey);
+  };
 
   // const register_did = async () => {
   //   if (!did || !Edverkey) {
@@ -45,38 +50,48 @@ function ProfileScreen() {
   // };
   // 25.03.18 수정
   const register_did = async () => {
-    if (!did || !Edverkey || !Xverkey || !Edsecretkey) { // ✅ X25519 키도 확인해야 함
+    if (!did || !Edverkey || !Xverkey || !Edsecretkey) {
+      // ✅ X25519 키도 확인해야 함
       Alert.alert('등록 실패', 'DID 또는 Verkey가 존재하지 않습니다.');
       return;
     }
     try {
       // ✅ 1. DID를 Ed25519 키로 등록 (NYM 트랜잭션)
-      const registerResponse = await registerDID('J4BALc9uEa8F1GCy7uka7f', did, Edverkey);
+      const registerResponse = await registerDID(
+        'J4BALc9uEa8F1GCy7uka7f',
+        did,
+        Edverkey,
+      );
       if (!registerResponse) {
         Alert.alert('등록 실패', 'DID 등록에 실패했습니다.');
         return;
       }
-      
-      console.log("✅ NYM 트랜잭션 완료. 이제 X25519 키를 등록합니다.");
-  
+
+      console.log('✅ NYM 트랜잭션 완료. 이제 X25519 키를 등록합니다.');
+
       // ✅ 2. X25519 키를 포함한 DID Document를 Indy Ledger에 추가 (ATTRIB 트랜잭션)
       // const attribResponse = await addDIDDocument('J4BALc9uEa8F1GCy7uka7f', did, Edverkey, Xverkey);
-      const attribResponse = await addX25519PublicKey(did, did, Xverkey, Edsecretkey);
+      const attribResponse = await addX25519PublicKey(
+        did,
+        did,
+        Xverkey,
+        Edsecretkey,
+      );
       if (!attribResponse) {
         Alert.alert('DID Document 등록 실패', 'X25519 키 추가에 실패했습니다.');
         return;
       }
-  
+
       Alert.alert('등록 성공', 'Ledger에 DID 및 X25519 키가 등록되었습니다.');
     } catch (error) {
       console.error('등록 실패:', error);
       Alert.alert('등록 실패');
     }
   };
-  
+
   //-------------------------------------------------------------//
   // 테스트 용 DID 데이터 삭제
-  const remove_did = async() => {
+  const remove_did = async () => {
     if (!did) {
       Alert.alert('삭제 실패', 'DID 또는 Verkey가 존재하지 않습니다.');
       return;
@@ -100,7 +115,7 @@ function ProfileScreen() {
       console.error('삭제 실패:', error);
       Alert.alert('삭제 실패');
     }
-  }
+  };
   //-------------------------------------------------------------//
 
   // 디바이스에 저장된 DID를 불러옴
@@ -121,6 +136,10 @@ function ProfileScreen() {
       const storedxSecretkey = await getItem('xSecretkey');
       console.log(`저장된 DID의 xSecretkey : ${storedxSecretkey}`);
       setXSecretkey(storedxSecretkey);
+      // FCM 토큰 확인용 (추후 삭제)
+      const storedToken = await getItem('fcmToken');
+      console.log(`저장된 fcmToken: ${storedToken}`);
+      setToken(storedToken);
     } catch (error) {
       console.error('DID 로드 실패:', error);
     }
@@ -139,9 +158,14 @@ function ProfileScreen() {
           <View>
             <Text style={styles.didText}>My DID: {did}</Text>
             <Text style={styles.didText}>My DID's edVerkey: {Edverkey}</Text>
-            <Text style={styles.didText}>My DID's edSecretKey: {Edsecretkey}</Text>
+            <Text style={styles.didText}>
+              My DID's edSecretKey: {Edsecretkey}
+            </Text>
             <Text style={styles.didText}>My DID's xVerkey: {Xverkey}</Text>
-            <Text style={styles.didText}>My DID's xSecretKey: {Xsecretkey}</Text>
+            <Text style={styles.didText}>
+              My DID's xSecretKey: {Xsecretkey}
+            </Text>
+            <Text style={styles.didText}>My Device's FCM Token: {token}</Text>
           </View>
         ) : (
           <Text style={styles.didText}>No DID Found</Text>
@@ -149,25 +173,16 @@ function ProfileScreen() {
       </View>
       <View style={styles.buttonContainer}>
         {!did && (
-          <TouchableOpacity
-            style={styles.button}
-            onPress={create_did}
-          >
+          <TouchableOpacity style={styles.button} onPress={create_did}>
             <Text style={styles.buttonText}>DID 생성</Text>
           </TouchableOpacity>
         )}
         {did && (
           <View>
-            <TouchableOpacity
-              style={styles.button}
-              onPress={register_did}
-              >
+            <TouchableOpacity style={styles.button} onPress={register_did}>
               <Text style={styles.buttonText}>DID 등록</Text>
             </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.button}
-              onPress={remove_did}
-              >
+            <TouchableOpacity style={styles.button} onPress={remove_did}>
               <Text style={styles.buttonText}>DID 삭제</Text>
             </TouchableOpacity>
           </View>
@@ -211,10 +226,10 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
     elevation: 3,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: {width: 0, height: 2},
     shadowOpacity: 0.2,
     shadowRadius: 5,
-    marginBottom : 5,
+    marginBottom: 5,
   },
   buttonText: {
     color: '#fff',
