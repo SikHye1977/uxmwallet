@@ -27,6 +27,7 @@ interface DidData {
   xSecretkey: string;
   createdAt: number; // 생성 시간 (구분을 위해)
   alias?: string; // 별칭 (선택 사항)
+  isRegistered?: boolean; // ledger 등록 상태 저장
 }
 
 function ProfileScreen() {
@@ -50,6 +51,7 @@ function ProfileScreen() {
         xSecretkey: result_did.x25519PrivateKey,
         createdAt: Date.now(),
         alias: `DID #${didList.length + 1}`,
+        isRegistered: false,
       };
 
       // 기존 목록에 추가
@@ -100,6 +102,16 @@ function ProfileScreen() {
         Alert.alert('실패', 'X25519 키 추가 실패');
         return;
       }
+      // ✅ 모든 등록 절차가 성공했다면 상태 업데이트
+      const updatedList = didList.map(item =>
+        item.did === selectedDid.did ? {...item, isRegistered: true} : item,
+      );
+
+      setDidList(updatedList);
+      setSelectedDid({...selectedDid, isRegistered: true}); // 현재 선택된 객체도 업데이트
+
+      // 저장소에 반영 (앱 껐다 켜도 유지되게)
+      await setItem('DID_LIST', JSON.stringify(updatedList));
 
       Alert.alert('등록 성공', `DID(${selectedDid.alias}) 등록 완료!`);
     } catch (error) {
@@ -292,10 +304,19 @@ function ProfileScreen() {
         {selectedDid && (
           <View style={styles.actionButtons}>
             <TouchableOpacity
-              style={styles.registerButton}
-              onPress={register_did}>
-              <Text style={styles.buttonText}>등록</Text>
+              // ✅ 등록된 상태면 스타일 변경 및 클릭 방지
+              style={[
+                styles.registerButton,
+                selectedDid.isRegistered && styles.disabledButton,
+              ]}
+              onPress={register_did}
+              disabled={selectedDid.isRegistered} // ✅ 등록되었으면 클릭 불가
+            >
+              <Text style={styles.buttonText}>
+                {selectedDid.isRegistered ? '등록됨' : '등록'}
+              </Text>
             </TouchableOpacity>
+
             <TouchableOpacity style={styles.deleteButton} onPress={remove_did}>
               <Text style={styles.buttonText}>삭제</Text>
             </TouchableOpacity>
@@ -474,7 +495,9 @@ const styles = StyleSheet.create({
     color: '#3b82f6',
     fontWeight: 'bold',
   },
-
+  disabledButton: {
+    backgroundColor: '#9ca3af', // 회색
+  },
   // 모달 스타일
   modalOverlay: {
     flex: 1,
