@@ -1,264 +1,3 @@
-// import React, { useEffect, useState } from 'react';
-// import {StyleSheet, Text, TouchableOpacity, View} from 'react-native';
-// import { getItem } from '../utils/AsyncStorage';
-// import { decrypt_challenge, get_challenge, regist_token, verify_challenge } from '../utils/DIDAuth';
-// import { SafeAreaView } from 'react-native-safe-area-context';
-// import { RouteProp, useRoute } from '@react-navigation/native';
-// import { Alert } from 'react-native';
-// import { useNavigation } from '@react-navigation/native';
-// import { StackNavigationProp } from '@react-navigation/stack';
-
-// // 25.03.26 추가
-// // Deep Link를 통한 AuhtScreen 접근 개선
-// type AuthScreenRouteParams = {
-//   authRequestId?: string;
-// };
-
-// // Root Stack (RootNavigator)
-// type RootStackParamList = {
-//   MainTabs: undefined | { screen: keyof MainTabParamList };
-//   Auth: { authRequestId?: string };
-// };
-
-// // Bottom Tabs (BottomTabsNavigator)
-// type MainTabParamList = {
-//   Home: undefined;
-//   Ticket: undefined;
-//   Profile: undefined;
-// };
-
-// function AuthScreen() {
-//   //25.03.26 추가
-//   const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
-//   const route = useRoute<RouteProp<RootStackParamList, 'Auth'>>();
-//   const [authRequestId, setAuthRequestId] = useState<string | undefined>(undefined);
-
-//   const [did, setDid] = useState<any>(null);
-//   const [edverkey, setEdVerkey] = useState<string | null>(null);
-//   const [edsecretkey, setEdSecretkey] = useState<string | null>(null);
-//   const [Xverkey, setXVerkey] = useState<string | null>(null);
-//   const [Xsecretkey, setXSecretkey] = useState<string | null>(null);
-//   //for test
-//   const [token, setToken] = useState<any>(null);
-//   //for test
-//   const [challenge, setChallenge] = useState<any>(null);
-//   const [decryptedchallenge, setDecryptedCahllenge] = useState<any>(null);
-//   const [screenKey, setScreenKey] = useState(0);
-
-//   const loadDid = async () => {
-//       try {
-//         //for test
-//         const storedToken = await getItem('fcmToken');
-//         console.log(`저장된 fcmToken: ${token}`);
-//         setToken(storedToken);
-//         //for test
-//         const storedDid = await getItem('DID');
-//         console.log(`저장된 DID: ${storedDid}`);
-//         setDid(storedDid);
-//         const storededVerkey = await getItem('edVerkey');
-//         console.log(`저장된 DID의 edVerkey : ${storededVerkey}`);
-//         setEdVerkey(storededVerkey);
-//         const storededSecretKey = await getItem('Secretkey');
-//         console.log(`저장된 DID의 edSecretKey : ${storededSecretKey}`);
-//         setEdSecretkey(storededSecretKey);
-//         const storedxVerkey = await getItem('xVerkey');
-//         console.log(`저장된 DID의 xVerkey : ${storedxVerkey}`);
-//         setXVerkey(storedxVerkey);
-//         const storedxSecretkey = await getItem('xSecretkey');
-//         console.log(`저장된 DID의 xSecretkey : ${storedxSecretkey}`);
-//         setXSecretkey(storedxSecretkey);
-//       } catch (error) {
-//         console.error('DID 로드 실패:', error);
-//       }
-//     };
-
-//   // 화면 로드시 로딩
-//   useEffect(() => {
-//     console.log('[DEBUG] route:', route);
-//     setAuthRequestId(route.params?.authRequestId);
-//     loadDid();
-//   }, [route]);
-
-//   // 25.03.05 Mediator에 토큰 등록
-//   const registtoken = async () => {
-//     if (!did) {
-//       console.error("DID가 존재하지 않습니다.");
-//       return;
-//     }
-//     const result = await regist_token(
-//       did,
-//       token
-//     );
-
-//     if (result) {
-//       console.log("Mediator 토큰 등록 성공:", result);
-//     } else {
-//       console.error("Mediator 토큰 등록 실패");
-//     }
-//   };
-
-//   // 25.03.12 Get Challenge
-//   const getchallenge = async () => {
-//     if(!did || !authRequestId) {
-//       console.error("DID가 존재하지 않습니다.");
-//       return;
-//     }
-//     const result = await get_challenge(
-//       authRequestId,
-//       did,
-//       token
-//     );
-//     setChallenge(result);
-//     setScreenKey(prevKey => prevKey + 1);
-//     if (result) {
-//       console.log("Challenge:", result);
-//     } else {
-//       console.error("Challenge 생성 실패");
-//     }
-//   }
-
-//   // 25.03.20 추가
-//   // challenge 검증
-//   const decrpytchallenge = async () => {
-//     if(!did || !Xverkey){
-//       console.error("DID가 존재하지 않습니다.");
-//       return;
-//     }
-//     const result = await decrypt_challenge(challenge);
-//     console.log(result);
-//     setDecryptedCahllenge(result);
-//   }
-
-//   // 25.03.27 수정
-//   // 검증 후 모달 -> 페이지 이동 // reload
-//   const verifychallenge = async () => {
-//     if (!did || !decryptedchallenge || !authRequestId) {
-//       console.error('did 또는 challenge가 존재하지 않습니다.');
-//       return;
-//     }
-
-//     const result = await verify_challenge(authRequestId,did, decryptedchallenge);
-//     console.log(result);
-
-//     if (result === true) {
-//       Alert.alert('성공', 'Auth에 성공했습니다', [
-//         {
-//           text: '확인',
-//           onPress: () => navigation.navigate('MainTabs', { screen: 'Home' }),
-//         },
-//       ]);
-//     } else {
-//       Alert.alert('실패', 'Auth에 실패했습니다', [
-//         {
-//           text: '다시 시도',
-//           onPress: () => {
-//             // 상태 초기화
-//             setChallenge(null);
-//             setDecryptedCahllenge(null);
-//           },
-//         },
-//       ]);
-//     }
-//   };
-
-//   return (
-//     <SafeAreaView style={styles.container}>
-//       <View style={styles.header}>
-//         <Text style={styles.title}>
-//           this is Auth Screen
-//         </Text>
-//         <Text>Auth Request ID: {authRequestId}</Text>
-//         <Text>Selected DID</Text>
-//         <Text style={styles.didText}>{did}</Text>
-//         {/* fot tets */}
-//         {/* <Text>Your FCM Token</Text>
-//         <Text style={styles.didText}>{token}</Text> */}
-//         {/* fot tets */}
-//         </View>
-//         {/* fot tets */}
-//         <Text>Your Challenge</Text>
-//         <Text style={styles.didText}>{challenge}</Text>
-//         <Text>Your Decrypted Challenge</Text>
-//         <Text style={styles.didText}>{decryptedchallenge}</Text>
-//         {/* fot tets */}
-//       <View style={styles.buttonContainer}>
-//         {/* <TouchableOpacity
-//           style={styles.button}
-//           onPress={registtoken}
-//           >
-//           <Text style={styles.buttonText}>FCM 토큰 등록</Text>
-//         </TouchableOpacity> */}
-//         <TouchableOpacity
-//           style={styles.button}
-//           onPress={getchallenge}
-//         >
-//           <Text style={styles.buttonText}>DID Auth -Challenge-</Text>
-//         </TouchableOpacity>
-//         <TouchableOpacity
-//           style={styles.button}
-//           onPress={decrpytchallenge}
-//         >
-//           <Text style={styles.buttonText}>DID Auth -decrypt-</Text>
-//         </TouchableOpacity>
-//         <TouchableOpacity
-//           style={styles.button}
-//           onPress={verifychallenge}
-//         >
-//           <Text style={styles.buttonText}>DID Auth -verify-</Text>
-//         </TouchableOpacity>
-//       </View>
-//     </SafeAreaView>
-//   )
-// }
-
-// const styles = StyleSheet.create({
-//   container: {
-//     flex: 1,
-//     padding: 20,
-//   },
-//   header: {
-//     alignItems: 'center',
-//     marginTop: 40,
-//   },
-//   title: {
-//     fontSize: 20,
-//     fontWeight: 'bold',
-//     marginBottom: 10,
-//   },
-//   didText: {
-//     fontSize: 16,
-//     color: 'blue',
-//   },
-//   buttonContainer: {
-//     position: 'absolute',
-//     bottom: '20%',
-//     alignSelf: 'center',
-//     width: '100%',
-//   },
-//   button: {
-//     backgroundColor: '#3b82f6',
-//     width: '90%',
-//     paddingVertical: 15,
-//     borderRadius: 12,
-//     alignItems: 'center',
-//     justifyContent: 'center',
-//     alignSelf: 'center',
-//     elevation: 3,
-//     shadowColor: '#000',
-//     shadowOffset: { width: 0, height: 2 },
-//     shadowOpacity: 0.2,
-//     shadowRadius: 5,
-//     marginBottom : 5,
-//   },
-//   buttonText: {
-//     color: '#fff',
-//     fontSize: 18,
-//     fontWeight: 'bold',
-//   },
-// });
-
-// export default AuthScreen;
-
 import React, {useEffect, useState} from 'react';
 import {
   StyleSheet,
@@ -268,8 +7,10 @@ import {
   Modal,
   FlatList,
   Alert,
+  ActivityIndicator, // ✅ 로딩 표시용 추가
 } from 'react-native';
 import {getItem} from '../utils/AsyncStorage';
+// 유틸 함수들을 직접 호출하기 위해 가져옵니다
 import {
   decrypt_challenge,
   get_challenge,
@@ -281,23 +22,17 @@ import {RouteProp, useRoute} from '@react-navigation/native';
 import {useNavigation} from '@react-navigation/native';
 import {StackNavigationProp} from '@react-navigation/stack';
 
-// Root Stack 등 타입 정의는 기존 유지
-type AuthScreenRouteParams = {
-  authRequestId?: string;
-};
-
+// ... (타입 정의 및 DidData 인터페이스는 기존과 동일) ...
+type AuthScreenRouteParams = {authRequestId?: string};
 type RootStackParamList = {
   MainTabs: undefined | {screen: keyof MainTabParamList};
   Auth: {authRequestId?: string};
 };
-
 type MainTabParamList = {
   Home: undefined;
   Ticket: undefined;
   Profile: undefined;
 };
-
-// ✅ ProfileScreen과 동일한 DID 데이터 인터페이스 정의
 interface DidData {
   did: string;
   edVerkey: string;
@@ -314,29 +49,26 @@ function AuthScreen() {
     undefined,
   );
 
-  // ✅ 다중 DID 관리를 위한 상태
   const [didList, setDidList] = useState<DidData[]>([]);
   const [selectedDid, setSelectedDid] = useState<DidData | null>(null);
-  const [isModalVisible, setIsModalVisible] = useState(false); // DID 선택 모달 표시 여부
-
-  // Auth 관련 상태
+  const [isModalVisible, setIsModalVisible] = useState(false);
   const [token, setToken] = useState<any>(null);
-  const [challenge, setChallenge] = useState<any>(null);
-  const [decryptedchallenge, setDecryptedCahllenge] = useState<any>(null);
 
-  // ✅ DID 목록 불러오기
+  // ✅ 로딩 상태 추가
+  const [isAuthLoading, setIsAuthLoading] = useState(false);
+
+  // 화면 표시용 (실제 로직에는 로컬 변수 사용)
+  const [progressLog, setProgressLog] = useState<string>('대기 중...');
+
   const loadDidList = async () => {
+    /* 기존과 동일 */
     try {
       const storedToken = await getItem('fcmToken');
       setToken(storedToken);
-
-      // 1. DID 리스트 로드
       const listJson = await getItem('DID_LIST');
       if (listJson) {
         const list: DidData[] = JSON.parse(listJson);
         setDidList(list);
-
-        // 2. 기본 선택 (저장된 선택값이 있으면 그것을, 없으면 첫 번째)
         const storedSelected = await getItem('SELECTED_DID');
         if (storedSelected) {
           setSelectedDid(JSON.parse(storedSelected));
@@ -350,112 +82,86 @@ function AuthScreen() {
   };
 
   useEffect(() => {
-    console.log('[DEBUG] route:', route);
     setAuthRequestId(route.params?.authRequestId);
     loadDidList();
   }, [route]);
 
-  // ✅ DID 선택 핸들러
   const handleSelectDid = (item: DidData) => {
     setSelectedDid(item);
     setIsModalVisible(false);
-    // 상태 초기화 (DID가 바뀌면 이전 인증 과정은 무효화)
-    setChallenge(null);
-    setDecryptedCahllenge(null);
+    setProgressLog('대기 중...');
   };
 
-  // 1. Mediator 토큰 등록
-  const registtoken = async () => {
-    if (!selectedDid) {
-      Alert.alert('오류', 'DID를 선택해주세요.');
-      return;
-    }
-    const result = await regist_token(
-      selectedDid.did, // ✅ 선택된 DID 사용
-      token,
-    );
-
-    if (result) {
-      console.log('Mediator 토큰 등록 성공:', result);
-      Alert.alert('성공', 'Mediator 토큰이 등록되었습니다.');
-    } else {
-      console.error('Mediator 토큰 등록 실패');
-    }
-  };
-
-  // 2. Challenge 요청
-  const getchallenge = async () => {
+  // ==========================================================
+  // ⚡️ 원클릭 통합 인증 함수 (핵심)
+  // ==========================================================
+  const handleOneClickAuth = async () => {
+    // 0. 사전 체크
     if (!selectedDid || !authRequestId) {
-      Alert.alert('오류', 'DID 또는 Auth Request ID가 없습니다.');
-      return;
-    }
-    const result = await get_challenge(
-      authRequestId,
-      selectedDid.did, // ✅ 선택된 DID 사용
-      token,
-    );
-    setChallenge(result);
-
-    if (result) {
-      console.log('Challenge:', result);
-    } else {
-      console.error('Challenge 생성 실패');
-      Alert.alert('오류', 'Challenge 생성에 실패했습니다.');
-    }
-  };
-
-  // 3. Challenge 복호화
-  const decrpytchallenge = async () => {
-    if (!selectedDid) {
-      Alert.alert('오류', 'DID를 선택해주세요.');
+      Alert.alert('오류', 'DID 또는 Request ID가 없습니다.');
       return;
     }
 
-    // ⚠️ 주의: decrypt_challenge 함수가 인자로 key를 받도록 구현되어 있어야 합니다.
-    // 기존에는 AsyncStorage에서 직접 꺼내 썼다면, 이제는 selectedDid.xSecretkey를 넘겨줘야 합니다.
-    // 만약 utils 함수가 인자를 안 받으면 utils/DIDAuth.ts 수정이 필요합니다.
+    setIsAuthLoading(true); // 로딩 시작
+    setProgressLog('1. Challenge 요청 중...');
+
     try {
-      // 예시: decrypt_challenge(challenge, selectedDid.xSecretkey) 형태로 호출 권장
-      const result = await decrypt_challenge(challenge);
-      console.log('Decrypted:', result);
-      setDecryptedCahllenge(result);
-    } catch (e) {
-      console.error(e);
-      Alert.alert('복호화 실패');
-    }
-  };
+      // ----------------------------------------------------
+      // 1. Challenge 요청
+      // ----------------------------------------------------
+      const challengeRes = await get_challenge(
+        authRequestId,
+        selectedDid.did,
+        token,
+      );
 
-  // 4. 검증 및 이동
-  const verifychallenge = async () => {
-    if (!selectedDid || !decryptedchallenge || !authRequestId) {
-      Alert.alert('오류', '인증 정보가 부족합니다.');
-      return;
-    }
+      if (!challengeRes) {
+        throw new Error('Challenge 생성 실패');
+      }
+      setProgressLog('2. Challenge 복호화 중...');
 
-    const result = await verify_challenge(
-      authRequestId,
-      selectedDid.did, // ✅ 선택된 DID 사용
-      decryptedchallenge,
-    );
-    console.log('Verify Result:', result);
+      // ----------------------------------------------------
+      // 2. Challenge 복호화
+      // (state가 아닌 방금 받은 challengeRes 변수를 바로 사용)
+      // ----------------------------------------------------
 
-    if (result === true) {
-      Alert.alert('성공', 'Auth에 성공했습니다', [
-        {
-          text: '확인',
-          onPress: () => navigation.navigate('MainTabs', {screen: 'Home'}),
-        },
-      ]);
-    } else {
-      Alert.alert('실패', 'Auth에 실패했습니다', [
-        {
-          text: '다시 시도',
-          onPress: () => {
-            setChallenge(null);
-            setDecryptedCahllenge(null);
+      // utils/DIDAuth.ts 구현에 따라 인자가 다를 수 있습니다.
+      // 만약 decrypt_challenge 내부에서 AsyncStorage를 쓴다면 그대로 호출.
+      // 만약 키를 넘겨줘야 한다면: decrypt_challenge(challengeRes, selectedDid.xSecretkey)
+      const decryptedRes = await decrypt_challenge(challengeRes);
+
+      if (!decryptedRes) {
+        throw new Error('복호화 실패');
+      }
+      setProgressLog('3. 최종 검증 중...');
+
+      // ----------------------------------------------------
+      // 3. 최종 검증 (Verify)
+      // (마찬가지로 decryptedRes 변수를 바로 사용)
+      // ----------------------------------------------------
+      const verifyRes = await verify_challenge(
+        authRequestId,
+        selectedDid.did,
+        decryptedRes,
+      );
+
+      if (verifyRes === true) {
+        setProgressLog('✅ 인증 성공!');
+        Alert.alert('성공', 'DID Auth에 성공했습니다.', [
+          {
+            text: '확인',
+            onPress: () => navigation.navigate('MainTabs', {screen: 'Home'}),
           },
-        },
-      ]);
+        ]);
+      } else {
+        throw new Error('검증 결과: 실패');
+      }
+    } catch (error: any) {
+      console.error('Auth Process Error:', error);
+      setProgressLog(`❌ 실패: ${error.message || '알 수 없는 오류'}`);
+      Alert.alert('인증 실패', error.message || '과정 중 문제가 발생했습니다.');
+    } finally {
+      setIsAuthLoading(false); // 로딩 종료
     }
   };
 
@@ -467,7 +173,7 @@ function AuthScreen() {
           Request ID: {authRequestId || '없음'}
         </Text>
 
-        {/* ✅ DID 선택 영역 */}
+        {/* DID 선택 영역 */}
         <View style={styles.selectorContainer}>
           <Text style={styles.label}>인증에 사용할 DID:</Text>
           {selectedDid ? (
@@ -478,7 +184,6 @@ function AuthScreen() {
           ) : (
             <Text style={styles.placeholder}>DID를 선택해주세요</Text>
           )}
-
           <TouchableOpacity
             style={styles.changeButton}
             onPress={() => setIsModalVisible(true)}>
@@ -486,24 +191,35 @@ function AuthScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* 디버그용 정보 표시 (필요 시 주석 해제) */}
-        {/* <Text>Challenge: {challenge ? 'Received' : 'None'}</Text>
-        <Text>Decrypted: {decryptedchallenge ? 'Success' : 'None'}</Text> */}
+        {/* 진행 상황 표시 */}
+        <View style={styles.statusContainer}>
+          <Text style={styles.statusText}>상태: {progressLog}</Text>
+        </View>
       </View>
 
       <View style={styles.buttonContainer}>
-        <TouchableOpacity style={styles.button} onPress={getchallenge}>
-          <Text style={styles.buttonText}>1. Challenge 요청</Text>
+        {/* ✅ 원클릭 인증 버튼 */}
+        <TouchableOpacity
+          style={[styles.mainButton, isAuthLoading && styles.disabledButton]}
+          onPress={handleOneClickAuth}
+          disabled={isAuthLoading}>
+          {isAuthLoading ? (
+            <ActivityIndicator color="#fff" />
+          ) : (
+            <Text style={styles.mainButtonText}>인증하기</Text>
+          )}
         </TouchableOpacity>
-        <TouchableOpacity style={styles.button} onPress={decrpytchallenge}>
-          <Text style={styles.buttonText}>2. Challenge 복호화</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.button} onPress={verifychallenge}>
-          <Text style={styles.buttonText}>3. 최종 인증 (Verify)</Text>
-        </TouchableOpacity>
+
+        {/* 기존 개별 버튼들은 테스트용으로 작게 남겨두거나 숨김 */}
+        {/* <View style={styles.debugContainer}>
+            <Text style={{marginBottom: 5, color: '#999'}}>디버그용 개별 실행</Text>
+            <TouchableOpacity onPress={registtoken}><Text>FCM 토큰 등록</Text></TouchableOpacity>
+            ...
+        </View> 
+        */}
       </View>
 
-      {/* ✅ DID 선택 모달 */}
+      {/* DID 선택 모달 (기존 코드 유지) */}
       <Modal
         visible={isModalVisible}
         transparent={true}
@@ -528,11 +244,6 @@ function AuthScreen() {
                   </Text>
                 </TouchableOpacity>
               )}
-              ListEmptyComponent={
-                <Text style={{padding: 20, textAlign: 'center'}}>
-                  저장된 DID가 없습니다.
-                </Text>
-              }
             />
             <TouchableOpacity
               style={styles.closeButton}
@@ -547,33 +258,12 @@ function AuthScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: 20,
-    backgroundColor: '#f9f9f9',
-  },
-  header: {
-    alignItems: 'center',
-    marginTop: 20,
-  },
-  title: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    marginBottom: 5,
-    color: '#333',
-  },
-  subText: {
-    fontSize: 14,
-    color: '#666',
-    marginBottom: 20,
-  },
-  label: {
-    fontSize: 14,
-    color: '#555',
-    marginBottom: 5,
-  },
+  container: {flex: 1, padding: 20, backgroundColor: '#f9f9f9'},
+  header: {alignItems: 'center', marginTop: 20},
+  title: {fontSize: 22, fontWeight: 'bold', marginBottom: 5, color: '#333'},
+  subText: {fontSize: 14, color: '#666', marginBottom: 20},
+  label: {fontSize: 14, color: '#555', marginBottom: 5},
 
-  // DID 선택기 스타일
   selectorContainer: {
     width: '100%',
     backgroundColor: '#fff',
@@ -583,47 +273,28 @@ const styles = StyleSheet.create({
     borderColor: '#ddd',
     alignItems: 'center',
   },
-  selectedInfo: {
-    alignItems: 'center',
-    marginBottom: 10,
-  },
-  didAlias: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#3b82f6',
-  },
-  didString: {
-    fontSize: 12,
-    color: '#888',
-    marginTop: 2,
-  },
-  placeholder: {
-    color: '#999',
-    marginBottom: 10,
-  },
+  selectedInfo: {alignItems: 'center', marginBottom: 10},
+  didAlias: {fontSize: 18, fontWeight: 'bold', color: '#3b82f6'},
+  didString: {fontSize: 12, color: '#888', marginTop: 2},
+  placeholder: {color: '#999', marginBottom: 10},
   changeButton: {
     backgroundColor: '#e0e7ff',
     paddingVertical: 8,
     paddingHorizontal: 16,
     borderRadius: 20,
   },
-  changeButtonText: {
-    color: '#3b82f6',
-    fontWeight: 'bold',
-    fontSize: 12,
-  },
+  changeButtonText: {color: '#3b82f6', fontWeight: 'bold', fontSize: 12},
 
-  // 메인 버튼 스타일
-  buttonContainer: {
-    marginTop: 40,
-    width: '100%',
-    alignItems: 'center',
-    gap: 15,
-  },
-  button: {
+  statusContainer: {marginTop: 20},
+  statusText: {fontSize: 14, color: '#333', fontWeight: '600'},
+
+  buttonContainer: {marginTop: 40, width: '100%', alignItems: 'center'},
+
+  // ✅ 메인 버튼 스타일 강조
+  mainButton: {
     backgroundColor: '#3b82f6',
     width: '100%',
-    paddingVertical: 15,
+    paddingVertical: 18,
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
@@ -633,13 +304,10 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.2,
     shadowRadius: 5,
   },
-  buttonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
+  mainButtonText: {color: '#fff', fontSize: 18, fontWeight: 'bold'},
+  disabledButton: {backgroundColor: '#9ca3af'},
 
-  // 모달 스타일
+  // 모달 스타일 (기존 유지)
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.5)',
@@ -658,23 +326,10 @@ const styles = StyleSheet.create({
     marginBottom: 15,
     textAlign: 'center',
   },
-  modalItem: {
-    padding: 15,
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
-  },
-  modalItemSelected: {
-    backgroundColor: '#eff6ff',
-  },
-  itemAlias: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#333',
-  },
-  itemDid: {
-    fontSize: 12,
-    color: '#666',
-  },
+  modalItem: {padding: 15, borderBottomWidth: 1, borderBottomColor: '#eee'},
+  modalItemSelected: {backgroundColor: '#eff6ff'},
+  itemAlias: {fontSize: 16, fontWeight: 'bold', color: '#333'},
+  itemDid: {fontSize: 12, color: '#666'},
   closeButton: {
     marginTop: 15,
     backgroundColor: '#6b7280',
@@ -682,10 +337,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     alignItems: 'center',
   },
-  closeButtonText: {
-    color: 'white',
-    fontWeight: 'bold',
-  },
+  closeButtonText: {color: 'white', fontWeight: 'bold'},
 });
 
 export default AuthScreen;
