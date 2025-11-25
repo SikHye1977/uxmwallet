@@ -38,6 +38,13 @@ function ProfileScreen() {
   const [isRenameModalVisible, setIsRenameModalVisible] = useState(false);
   const [tempAlias, setTempAlias] = useState('');
 
+  // 25.11.25 수정
+  // 선택된 DID를 Global로 공유하기 위한 함수
+  const handleSelectDid = async (item: DidData) => {
+    setSelectedDid(item);
+    await setItem('SELECTED_DID', JSON.stringify(item)); // <-- 이 부분이 핵심!
+  };
+
   // 1. DID 생성 및 목록에 추가
   const create_did = async () => {
     try {
@@ -58,6 +65,8 @@ function ProfileScreen() {
       const updatedList = [...didList, newDidData];
       setDidList(updatedList);
       setSelectedDid(newDidData); // 방금 만든 것을 선택 상태로
+      // ✅ 생성 직후 선택 처리 및 저장소 동기화
+      await handleSelectDid(newDidData);
 
       // 저장소 업데이트 (전체 리스트 저장)
       await setItem('DID_LIST', JSON.stringify(updatedList));
@@ -103,11 +112,15 @@ function ProfileScreen() {
         return;
       }
       // ✅ 모든 등록 절차가 성공했다면 상태 업데이트
+      const updatedDid = {...selectedDid, isRegistered: true};
       const updatedList = didList.map(item =>
         item.did === selectedDid.did ? {...item, isRegistered: true} : item,
       );
 
       setDidList(updatedList);
+
+      // ✅ 등록 상태 변경 후에도 저장소 동기화 (SELECTED_DID 업데이트)
+      await handleSelectDid(updatedDid);
       setSelectedDid({...selectedDid, isRegistered: true}); // 현재 선택된 객체도 업데이트
 
       // 저장소에 반영 (앱 껐다 켜도 유지되게)
@@ -127,7 +140,10 @@ function ProfileScreen() {
     try {
       const updatedList = didList.filter(item => item.did !== selectedDid.did);
       setDidList(updatedList);
+
       setSelectedDid(null); // 선택 해제
+      // ✅ 삭제 시 선택 상태 초기화 및 저장소 삭제
+      await removeItem('SELECTED_DID');
 
       await setItem('DID_LIST', JSON.stringify(updatedList));
       Alert.alert('삭제 성공', '선택한 DID가 삭제되었습니다.');
@@ -143,6 +159,9 @@ function ProfileScreen() {
       if (storedList) {
         const parsedList: DidData[] = JSON.parse(storedList);
         setDidList(parsedList);
+
+        // ✅ 저장된 선택 DID가 있는지 확인하고 복원
+        const storedSelected = await getItem('SELECTED_DID');
         // 목록이 있으면 첫 번째 것을 기본 선택
         if (parsedList.length > 0) {
           setSelectedDid(parsedList[0]);
@@ -178,6 +197,9 @@ function ProfileScreen() {
       setDidList(newList);
       setSelectedDid(migratedDid);
 
+      // ✅ 마이그레이션 데이터도 선택 처리
+      await handleSelectDid(migratedDid);
+
       // 기존 키 삭제 (선택 사항)
       await removeItem('DID');
       // ... 나머지 키들도 삭제
@@ -202,6 +224,7 @@ function ProfileScreen() {
     }
 
     try {
+      const updatedDid = {...selectedDid, alias: tempAlias}; // 업데이트된 객체 미리 생성
       // 1. 리스트에서 해당 DID를 찾아 별칭 업데이트
       const updatedList = didList.map(item =>
         item.did === selectedDid.did ? {...item, alias: tempAlias} : item,
@@ -209,6 +232,9 @@ function ProfileScreen() {
 
       // 2. 상태 업데이트
       setDidList(updatedList);
+
+      // ✅ 별칭 변경 사항을 SELECTED_DID에도 반영해야 TicketScreen 타이틀이 바뀜
+      await handleSelectDid(updatedDid);
 
       // 3. 현재 선택된 DID 객체도 업데이트 (화면에 바로 반영되도록)
       setSelectedDid({...selectedDid, alias: tempAlias});
@@ -235,7 +261,8 @@ function ProfileScreen() {
         styles.didItem,
         selectedDid?.did === item.did && styles.selectedDidItem,
       ]}
-      onPress={() => setSelectedDid(item)}>
+      onPress={() => handleSelectDid(item)}>
+      {/* onPress={() => setSelectedDid(item)}> */}
       <Text style={styles.didAlias}>{item.alias}</Text>
       <Text style={styles.didDetailText} numberOfLines={1}>
         {item.did}
