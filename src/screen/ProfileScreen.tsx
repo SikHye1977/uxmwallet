@@ -1,7 +1,16 @@
 import React, {useState, useEffect} from 'react';
-import {StyleSheet, Text, View, Alert} from 'react-native';
+import {
+  StyleSheet,
+  Text,
+  View,
+  Alert,
+  FlatList,
+  ScrollView,
+  TouchableOpacity,
+  Modal,
+  TextInput,
+} from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
-import {TouchableOpacity} from 'react-native';
 import {removeItem, setItem, getItem} from '../utils/AsyncStorage';
 import {
   generateSeparateKeyPairs,
@@ -9,185 +18,321 @@ import {
   addX25519PublicKey,
 } from '../utils/DIDGenerator';
 
+// DID 데이터 타입 정의
+interface DidData {
+  did: string;
+  edVerkey: string;
+  edSecretkey: string;
+  xVerkey: string;
+  xSecretkey: string;
+  createdAt: number; // 생성 시간 (구분을 위해)
+  alias?: string; // 별칭 (선택 사항)
+}
+
 function ProfileScreen() {
-  const [did, setDid] = useState<any>(null);
-  const [Edverkey, setEdVerkey] = useState<string | null>(null);
-  const [Edsecretkey, setEdSecretkey] = useState<string | null>(null);
-  const [Xverkey, setXVerkey] = useState<string | null>(null);
-  const [Xsecretkey, setXSecretkey] = useState<string | null>(null);
-  const [token, setToken] = useState<string | null>(null);
+  const [didList, setDidList] = useState<DidData[]>([]); // 전체 DID 목록
+  const [selectedDid, setSelectedDid] = useState<DidData | null>(null); // 현재 선택된 DID
 
-  // 25.02.10 indy vdr 활용해서 DID 등록하게 변경
-  // 25.03.18 x25519 키페어 추가
+  // ✅ 별칭 변경을 위한 상태 추가
+  const [isRenameModalVisible, setIsRenameModalVisible] = useState(false);
+  const [tempAlias, setTempAlias] = useState('');
+
+  // 1. DID 생성 및 목록에 추가
   const create_did = async () => {
-    const result_did = await generateSeparateKeyPairs();
+    try {
+      const result_did = await generateSeparateKeyPairs();
 
-    setDid(result_did.did);
-    setEdVerkey(result_did.edPublicKey);
-    setEdSecretkey(result_did.edPrivateKey);
-    setXVerkey(result_did.x25519PublicKey);
-    setXSecretkey(result_did.x25519PrivateKey);
+      const newDidData: DidData = {
+        did: result_did.did,
+        edVerkey: result_did.edPublicKey,
+        edSecretkey: result_did.edPrivateKey,
+        xVerkey: result_did.x25519PublicKey,
+        xSecretkey: result_did.x25519PrivateKey,
+        createdAt: Date.now(),
+        alias: `DID #${didList.length + 1}`,
+      };
 
-    await setItem('DID', result_did.did);
-    await setItem('edVerkey', result_did.edPublicKey);
-    await setItem('edSecretkey', result_did.edPrivateKey);
-    await setItem('xVerkey', result_did.x25519PublicKey);
-    await setItem('xSecretkey', result_did.x25519PrivateKey);
+      // 기존 목록에 추가
+      const updatedList = [...didList, newDidData];
+      setDidList(updatedList);
+      setSelectedDid(newDidData); // 방금 만든 것을 선택 상태로
+
+      // 저장소 업데이트 (전체 리스트 저장)
+      await setItem('DID_LIST', JSON.stringify(updatedList));
+
+      Alert.alert('생성 완료', '새로운 DID가 생성되었습니다.');
+    } catch (e) {
+      console.error(e);
+      Alert.alert('생성 실패');
+    }
   };
 
-  // const register_did = async () => {
-  //   if (!did || !Edverkey) {
-  //     Alert.alert('등록 실패', 'DID 또는 Verkey가 존재하지 않습니다.');
-  //     return;
-  //   }
-  //   try {
-  //     await registerDID('J4BALc9uEa8F1GCy7uka7f', did, Edverkey);
-  //     Alert.alert('등록 성공', 'Ledger에 DID가 등록되었습니다.');
-  //   } catch (error) {
-  //     console.error('등록 실패:', error);
-  //     Alert.alert('등록 실패');
-  //   }
-  // };
-  // 25.03.18 수정
+  // 2. DID 등록 (선택된 DID를 등록)
   const register_did = async () => {
-    if (!did || !Edverkey || !Xverkey || !Edsecretkey) {
-      // ✅ X25519 키도 확인해야 함
-      Alert.alert('등록 실패', 'DID 또는 Verkey가 존재하지 않습니다.');
+    if (!selectedDid) {
+      Alert.alert('등록 실패', '선택된 DID가 없습니다.');
       return;
     }
+
     try {
-      // ✅ 1. DID를 Ed25519 키로 등록 (NYM 트랜잭션)
+      // 1. NYM 트랜잭션
       const registerResponse = await registerDID(
         'J4BALc9uEa8F1GCy7uka7f',
-        did,
-        Edverkey,
+        selectedDid.did,
+        selectedDid.edVerkey,
       );
       if (!registerResponse) {
         Alert.alert('등록 실패', 'DID 등록에 실패했습니다.');
         return;
       }
 
-      console.log('✅ NYM 트랜잭션 완료. 이제 X25519 키를 등록합니다.');
+      console.log('✅ NYM 트랜잭션 완료. X25519 등록 시작');
 
-      // ✅ 2. X25519 키를 포함한 DID Document를 Indy Ledger에 추가 (ATTRIB 트랜잭션)
-      // const attribResponse = await addDIDDocument('J4BALc9uEa8F1GCy7uka7f', did, Edverkey, Xverkey);
+      // 2. ATTRIB 트랜잭션
       const attribResponse = await addX25519PublicKey(
-        did,
-        did,
-        Xverkey,
-        Edsecretkey,
+        selectedDid.did,
+        selectedDid.did,
+        selectedDid.xVerkey,
+        selectedDid.edSecretkey,
       );
+
       if (!attribResponse) {
-        Alert.alert('DID Document 등록 실패', 'X25519 키 추가에 실패했습니다.');
+        Alert.alert('실패', 'X25519 키 추가 실패');
         return;
       }
 
-      Alert.alert('등록 성공', 'Ledger에 DID 및 X25519 키가 등록되었습니다.');
+      Alert.alert('등록 성공', `DID(${selectedDid.alias}) 등록 완료!`);
     } catch (error) {
       console.error('등록 실패:', error);
       Alert.alert('등록 실패');
     }
   };
 
-  //-------------------------------------------------------------//
-  // 테스트 용 DID 데이터 삭제
+  // 3. 특정 DID 삭제
   const remove_did = async () => {
-    if (!did) {
-      Alert.alert('삭제 실패', 'DID 또는 Verkey가 존재하지 않습니다.');
-      return;
-    }
-    try {
-      await removeItem('DID');
-      await removeItem('Verkey');
-      await removeItem('Secretkey');
-      await removeItem('edVerkey');
-      await removeItem('edSecretkey');
-      await removeItem('xVerkey');
-      await removeItem('xSecretkey');
+    if (!selectedDid) return;
 
-      setDid(null);
-      setEdVerkey(null);
-      setEdSecretkey(null);
-      setXVerkey(null);
-      setXSecretkey(null);
-      Alert.alert('삭제 성공', '디바이스에 저장된 DID를 삭제했습니다.');
+    try {
+      const updatedList = didList.filter(item => item.did !== selectedDid.did);
+      setDidList(updatedList);
+      setSelectedDid(null); // 선택 해제
+
+      await setItem('DID_LIST', JSON.stringify(updatedList));
+      Alert.alert('삭제 성공', '선택한 DID가 삭제되었습니다.');
     } catch (error) {
       console.error('삭제 실패:', error);
-      Alert.alert('삭제 실패');
     }
   };
-  //-------------------------------------------------------------//
 
-  // 디바이스에 저장된 DID를 불러옴
-  const loadDid = async () => {
+  // 4. 저장된 DID 목록 불러오기
+  const loadDidList = async () => {
     try {
-      const storedDid = await getItem('DID');
-      console.log(`저장된 DID: ${storedDid}`);
-      setDid(storedDid);
-      const storededVerkey = await getItem('edVerkey');
-      console.log(`저장된 DID의 edVerkey : ${storededVerkey}`);
-      setEdVerkey(storededVerkey);
-      const storededSecretKey = await getItem('edSecretkey');
-      console.log(`저장된 DID의 edSecretKey : ${storededSecretKey}`);
-      setEdSecretkey(storededSecretKey);
-      const storedxVerkey = await getItem('xVerkey');
-      console.log(`저장된 DID의 xVerkey : ${storedxVerkey}`);
-      setXVerkey(storedxVerkey);
-      const storedxSecretkey = await getItem('xSecretkey');
-      console.log(`저장된 DID의 xSecretkey : ${storedxSecretkey}`);
-      setXSecretkey(storedxSecretkey);
-      // FCM 토큰 확인용 (추후 삭제)
-      const storedToken = await getItem('fcmToken');
-      console.log(`저장된 fcmToken: ${storedToken}`);
-      setToken(storedToken);
+      const storedList = await getItem('DID_LIST');
+      if (storedList) {
+        const parsedList: DidData[] = JSON.parse(storedList);
+        setDidList(parsedList);
+        // 목록이 있으면 첫 번째 것을 기본 선택
+        if (parsedList.length > 0) {
+          setSelectedDid(parsedList[0]);
+        }
+      }
     } catch (error) {
       console.error('DID 로드 실패:', error);
     }
   };
 
-  // 화면 로드시 로딩
+  // 5. 초기화: 기존 단일 DID 데이터가 있다면 리스트로 마이그레이션 (옵션)
+  const migrateOldData = async () => {
+    const oldDid = await getItem('DID');
+    if (oldDid) {
+      // 기존 데이터가 있다면 리스트 형식으로 변환해서 저장하고 기존 키 삭제
+      const oldEdVerkey = await getItem('edVerkey');
+      const oldEdSecret = await getItem('edSecretkey');
+      const oldXVerkey = await getItem('xVerkey');
+      const oldXSecret = await getItem('xSecretkey');
+
+      const migratedDid: DidData = {
+        did: oldDid,
+        edVerkey: oldEdVerkey,
+        edSecretkey: oldEdSecret,
+        xVerkey: oldXVerkey,
+        xSecretkey: oldXSecret,
+        createdAt: Date.now(),
+        alias: '기존 DID',
+      };
+
+      const newList = [migratedDid];
+      await setItem('DID_LIST', JSON.stringify(newList));
+      setDidList(newList);
+      setSelectedDid(migratedDid);
+
+      // 기존 키 삭제 (선택 사항)
+      await removeItem('DID');
+      // ... 나머지 키들도 삭제
+    } else {
+      loadDidList();
+    }
+  };
+
+  // ✅ 6. 별칭 수정 모달 열기
+  const openRenameModal = () => {
+    if (!selectedDid) return;
+    setTempAlias(selectedDid.alias || ''); // 현재 별칭을 입력창에 미리 채워둠
+    setIsRenameModalVisible(true);
+  };
+
+  // ✅ 7. 별칭 저장 로직
+  const saveAlias = async () => {
+    if (!selectedDid) return;
+    if (!tempAlias.trim()) {
+      Alert.alert('알림', '별칭을 입력해주세요.');
+      return;
+    }
+
+    try {
+      // 1. 리스트에서 해당 DID를 찾아 별칭 업데이트
+      const updatedList = didList.map(item =>
+        item.did === selectedDid.did ? {...item, alias: tempAlias} : item,
+      );
+
+      // 2. 상태 업데이트
+      setDidList(updatedList);
+
+      // 3. 현재 선택된 DID 객체도 업데이트 (화면에 바로 반영되도록)
+      setSelectedDid({...selectedDid, alias: tempAlias});
+
+      // 4. 저장소에 반영
+      await setItem('DID_LIST', JSON.stringify(updatedList));
+
+      setIsRenameModalVisible(false); // 모달 닫기
+    } catch (e) {
+      console.error('별칭 수정 실패:', e);
+      Alert.alert('오류', '별칭 수정 중 문제가 발생했습니다.');
+    }
+  };
+
   useEffect(() => {
-    loadDid();
+    // loadDidList(); // 마이그레이션 필요 없으면 이거 사용
+    migrateOldData(); // 기존 데이터 살리려면 이거 사용
   }, []);
+
+  // UI 렌더링
+  const renderItem = ({item}: {item: DidData}) => (
+    <TouchableOpacity
+      style={[
+        styles.didItem,
+        selectedDid?.did === item.did && styles.selectedDidItem,
+      ]}
+      onPress={() => setSelectedDid(item)}>
+      <Text style={styles.didAlias}>{item.alias}</Text>
+      <Text style={styles.didDetailText} numberOfLines={1}>
+        {item.did}
+      </Text>
+    </TouchableOpacity>
+  );
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Profile Page</Text>
-        {did ? (
-          <View>
-            <Text style={styles.didText}>My DID: {did}</Text>
-            <Text style={styles.didText}>My DID's edVerkey: {Edverkey}</Text>
-            <Text style={styles.didText}>
-              My DID's edSecretKey: {Edsecretkey}
-            </Text>
-            <Text style={styles.didText}>My DID's xVerkey: {Xverkey}</Text>
-            <Text style={styles.didText}>
-              My DID's xSecretKey: {Xsecretkey}
-            </Text>
-            <Text style={styles.didText}>My Device's FCM Token: {token}</Text>
-          </View>
+      <Text style={styles.title}>DID Wallet</Text>
+
+      {/* DID 목록 영역 */}
+      <View style={styles.listContainer}>
+        <Text style={styles.sectionTitle}>
+          보유 DID 목록 ({didList.length})
+        </Text>
+        <FlatList
+          data={didList}
+          renderItem={renderItem}
+          keyExtractor={item => item.did}
+          style={styles.flatList}
+          ListEmptyComponent={
+            <Text style={styles.emptyText}>생성된 DID가 없습니다.</Text>
+          }
+        />
+      </View>
+
+      {/* 선택된 DID 상세 정보 */}
+      <View style={styles.detailContainer}>
+        <View style={styles.detailHeader}>
+          <Text style={styles.sectionTitle}>선택된 DID 정보</Text>
+          {/* ✅ 별칭 수정 버튼 추가 */}
+          {selectedDid && (
+            <TouchableOpacity onPress={openRenameModal} style={styles.editIcon}>
+              <Text style={styles.editText}>✏️ 이름 변경</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+        {selectedDid ? (
+          <ScrollView style={styles.scrollDetail}>
+            <Text style={styles.detailLabel}>Alias:</Text>
+            <Text style={styles.detailValue}>{selectedDid.alias}</Text>
+
+            <Text style={styles.detailLabel}>DID:</Text>
+            <Text style={styles.detailValue}>{selectedDid.did}</Text>
+
+            <Text style={styles.detailLabel}>Ed Verkey:</Text>
+            <Text style={styles.detailValue}>{selectedDid.edVerkey}</Text>
+
+            <Text style={styles.detailLabel}>X25519 Verkey:</Text>
+            <Text style={styles.detailValue}>{selectedDid.xVerkey}</Text>
+          </ScrollView>
         ) : (
-          <Text style={styles.didText}>No DID Found</Text>
+          <View style={styles.emptyDetail}>
+            <Text style={styles.emptyText}>목록에서 DID를 선택해주세요.</Text>
+          </View>
         )}
       </View>
+
+      {/* 버튼 영역 */}
       <View style={styles.buttonContainer}>
-        {!did && (
-          <TouchableOpacity style={styles.button} onPress={create_did}>
-            <Text style={styles.buttonText}>DID 생성</Text>
-          </TouchableOpacity>
-        )}
-        {did && (
-          <View>
-            <TouchableOpacity style={styles.button} onPress={register_did}>
-              <Text style={styles.buttonText}>DID 등록</Text>
+        <TouchableOpacity style={styles.createButton} onPress={create_did}>
+          <Text style={styles.buttonText}>+ 새 DID 생성</Text>
+        </TouchableOpacity>
+
+        {selectedDid && (
+          <View style={styles.actionButtons}>
+            <TouchableOpacity
+              style={styles.registerButton}
+              onPress={register_did}>
+              <Text style={styles.buttonText}>등록</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.button} onPress={remove_did}>
-              <Text style={styles.buttonText}>DID 삭제</Text>
+            <TouchableOpacity style={styles.deleteButton} onPress={remove_did}>
+              <Text style={styles.buttonText}>삭제</Text>
             </TouchableOpacity>
           </View>
         )}
       </View>
+      {/* ✅ 별칭 수정 모달 추가 */}
+      <Modal
+        visible={isRenameModalVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setIsRenameModalVisible(false)}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContainer}>
+            <Text style={styles.modalTitle}>별칭 변경</Text>
+            <TextInput
+              style={styles.input}
+              value={tempAlias}
+              onChangeText={setTempAlias}
+              placeholder="새로운 별칭을 입력하세요"
+              autoFocus
+            />
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={[styles.modalBtn, styles.cancelBtn]}
+                onPress={() => setIsRenameModalVisible(false)}>
+                <Text style={styles.modalBtnText}>취소</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalBtn, styles.saveBtn]}
+                onPress={saveAlias}>
+                <Text style={styles.modalBtnText}>저장</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -195,45 +340,188 @@ function ProfileScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 20,
-  },
-  header: {
-    alignItems: 'center',
-    marginTop: 40,
+    // padding: 20, // ❌ 기존: 사방으로 20씩 여백이 있어서 위쪽이 뜸
+    paddingHorizontal: 20, // ✅ 수정: 좌우 여백은 그대로 20 유지
+    paddingTop: -30, // ✅ 수정: 위쪽 여백을 0으로 설정 (필요하면 10 정도로 조절)
+    paddingBottom: 20,
+    backgroundColor: '#f5f5f5',
   },
   title: {
-    fontSize: 20,
+    fontSize: 24,
     fontWeight: 'bold',
-    marginBottom: 10,
+    marginBottom: 20,
+    marginTop: 0, // ✅ 추가: 타이틀 위쪽에 최소한의 숨통(10)만 줌 (원하면 0으로)
+    textAlign: 'center',
+    color: '#333',
   },
-  didText: {
+  sectionTitle: {
     fontSize: 16,
-    color: 'blue',
+    fontWeight: '600',
+    marginBottom: 10,
+    color: '#555',
   },
-  buttonContainer: {
-    position: 'absolute',
-    bottom: '20%',
-    alignSelf: 'center',
-    width: '100%',
+  // 리스트 스타일
+  listContainer: {
+    flex: 1,
+    marginBottom: 20,
   },
-  button: {
-    backgroundColor: '#3b82f6',
-    width: '90%',
-    paddingVertical: 15,
-    borderRadius: 12,
-    alignItems: 'center',
+  flatList: {
+    flexGrow: 0,
+    maxHeight: 200, // 리스트 높이 제한
+  },
+  didItem: {
+    backgroundColor: '#fff',
+    padding: 15,
+    borderRadius: 8,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: '#ddd',
+  },
+  selectedDidItem: {
+    borderColor: '#3b82f6',
+    backgroundColor: '#eff6ff',
+    borderWidth: 2,
+  },
+  didAlias: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#333',
+  },
+  didDetailText: {
+    fontSize: 12,
+    color: '#666',
+    marginTop: 4,
+  },
+  // 상세 정보 스타일
+  detailContainer: {
+    flex: 1,
+    backgroundColor: '#fff',
+    borderRadius: 10,
+    padding: 15,
+    marginBottom: 20,
+  },
+  scrollDetail: {
+    flex: 1,
+  },
+  detailLabel: {
+    fontSize: 12,
+    fontWeight: 'bold',
+    color: '#888',
+    marginTop: 8,
+  },
+  detailValue: {
+    fontSize: 14,
+    color: '#333',
+    marginBottom: 4,
+  },
+  emptyDetail: {
+    flex: 1,
     justifyContent: 'center',
-    alignSelf: 'center',
-    elevation: 3,
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 2},
-    shadowOpacity: 0.2,
-    shadowRadius: 5,
-    marginBottom: 5,
+    alignItems: 'center',
+  },
+  emptyText: {
+    color: '#999',
+    textAlign: 'center',
+    padding: 20,
+  },
+  // 버튼 스타일
+  buttonContainer: {
+    gap: 10,
+  },
+  createButton: {
+    backgroundColor: '#3b82f6',
+    padding: 15,
+    borderRadius: 10,
+    alignItems: 'center',
+  },
+  actionButtons: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  registerButton: {
+    flex: 1,
+    backgroundColor: '#10b981',
+    padding: 15,
+    borderRadius: 10,
+    alignItems: 'center',
+  },
+  deleteButton: {
+    flex: 1,
+    backgroundColor: '#ef4444',
+    padding: 15,
+    borderRadius: 10,
+    alignItems: 'center',
   },
   buttonText: {
     color: '#fff',
+    fontWeight: 'bold',
+    fontSize: 16,
+  },
+  detailHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  editIcon: {
+    backgroundColor: '#e0e7ff',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 5,
+  },
+  editText: {
+    fontSize: 12,
+    color: '#3b82f6',
+    fontWeight: 'bold',
+  },
+
+  // 모달 스타일
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContainer: {
+    width: '80%',
+    backgroundColor: 'white',
+    padding: 20,
+    borderRadius: 15,
+    elevation: 5,
+  },
+  modalTitle: {
     fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 15,
+    textAlign: 'center',
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 8,
+    padding: 10,
+    fontSize: 16,
+    marginBottom: 20,
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 10,
+  },
+  modalBtn: {
+    flex: 1,
+    padding: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  cancelBtn: {
+    backgroundColor: '#9ca3af',
+  },
+  saveBtn: {
+    backgroundColor: '#3b82f6',
+  },
+  modalBtnText: {
+    color: 'white',
     fontWeight: 'bold',
   },
 });
