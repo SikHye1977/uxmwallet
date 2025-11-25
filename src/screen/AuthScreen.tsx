@@ -10,7 +10,6 @@ import {
   ActivityIndicator, // ✅ 로딩 표시용 추가
 } from 'react-native';
 import {getItem} from '../utils/AsyncStorage';
-// 유틸 함수들을 직접 호출하기 위해 가져옵니다
 import {
   decrypt_challenge,
   get_challenge,
@@ -61,7 +60,6 @@ function AuthScreen() {
   const [progressLog, setProgressLog] = useState<string>('대기 중...');
 
   const loadDidList = async () => {
-    /* 기존과 동일 */
     try {
       const storedToken = await getItem('fcmToken');
       setToken(storedToken);
@@ -93,7 +91,8 @@ function AuthScreen() {
   };
 
   // ==========================================================
-  // ⚡️ 원클릭 통합 인증 함수 (핵심)
+  // 25.11.25 추가 및 수정
+  // 통합 인증함수
   // ==========================================================
   const handleOneClickAuth = async () => {
     // 0. 사전 체크
@@ -124,10 +123,6 @@ function AuthScreen() {
       // 2. Challenge 복호화
       // (state가 아닌 방금 받은 challengeRes 변수를 바로 사용)
       // ----------------------------------------------------
-
-      // utils/DIDAuth.ts 구현에 따라 인자가 다를 수 있습니다.
-      // 만약 decrypt_challenge 내부에서 AsyncStorage를 쓴다면 그대로 호출.
-      // 만약 키를 넘겨줘야 한다면: decrypt_challenge(challengeRes, selectedDid.xSecretkey)
       const decryptedRes = await decrypt_challenge(challengeRes);
 
       if (!decryptedRes) {
@@ -137,7 +132,6 @@ function AuthScreen() {
 
       // ----------------------------------------------------
       // 3. 최종 검증 (Verify)
-      // (마찬가지로 decryptedRes 변수를 바로 사용)
       // ----------------------------------------------------
       const verifyRes = await verify_challenge(
         authRequestId,
@@ -198,7 +192,6 @@ function AuthScreen() {
       </View>
 
       <View style={styles.buttonContainer}>
-        {/* ✅ 원클릭 인증 버튼 */}
         <TouchableOpacity
           style={[styles.mainButton, isAuthLoading && styles.disabledButton]}
           onPress={handleOneClickAuth}
@@ -219,7 +212,7 @@ function AuthScreen() {
         */}
       </View>
 
-      {/* DID 선택 모달 (기존 코드 유지) */}
+      {/* DID 선택 모달 */}
       <Modal
         visible={isModalVisible}
         transparent={true}
