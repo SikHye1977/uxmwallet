@@ -123,7 +123,10 @@ function AuthScreen() {
       // 2. Challenge 복호화
       // (state가 아닌 방금 받은 challengeRes 변수를 바로 사용)
       // ----------------------------------------------------
-      const decryptedRes = await decrypt_challenge(challengeRes);
+      const decryptedRes = await decrypt_challenge(
+        challengeRes,
+        selectedDid.xSecretkey, // <--- 여기서 선택된 DID의 키를 넘겨줌
+      );
 
       if (!decryptedRes) {
         throw new Error('복호화 실패');

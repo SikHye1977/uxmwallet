@@ -5,7 +5,7 @@ import {
   View,
   ActivityIndicator,
   TouchableOpacity,
-  FlatList, // ✅ 성능 최적화를 위해 변경
+  FlatList,
   Alert,
 } from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
@@ -19,7 +19,6 @@ type TicketRouteParamList = {
   Ticket: {targetUrl?: string};
 };
 
-// DID 데이터 타입 (ProfileScreen과 동일하게)
 interface DidData {
   did: string;
   alias?: string;
@@ -30,30 +29,31 @@ function TicketScreen() {
   const targetUrl = route.params?.targetUrl;
 
   const [vcList, setVcList] = useState<any[]>([]);
-  const [currentDid, setCurrentDid] = useState<DidData | null>(null); // ✅ 현재 선택된 DID 상태 추가
+  const [currentDid, setCurrentDid] = useState<DidData | null>(null);
   const [loading, setLoading] = useState(false);
   const [isDeleteMode, setIsDeleteMode] = useState(false);
 
-  // 데이터 로드 및 필터링 함수
+  // 1️⃣ 데이터 로드 및 필터링
   const loadStoredVCs = useCallback(async () => {
     try {
       // 1. 현재 선택된 DID 가져오기
       const selectedDidJson = await getItem('SELECTED_DID');
 
+      // 선택된 DID가 없으면 초기화
       if (!selectedDidJson) {
         setVcList([]);
         setCurrentDid(null);
-        return; // 선택된 DID가 없으면 빈 목록 표시
+        return;
       }
 
       const selectedDidData: DidData = JSON.parse(selectedDidJson);
       setCurrentDid(selectedDidData);
 
-      // 2. 저장된 모든 티켓 키 가져오기
+      // 2. 저장된 모든 티켓 데이터 가져오기
       const keys = await AsyncStorage.getAllKeys();
+      // 키가 'vc:'로 시작하는 것들 찾기
       const vcKeys = keys.filter(k => k.startsWith('vc:'));
 
-      // 3. 티켓 데이터 파싱
       const vcData = await Promise.all(
         vcKeys.map(async key => {
           try {
@@ -65,17 +65,17 @@ function TicketScreen() {
         }),
       );
 
-      // 4. ✅ 필터링 로직 (핵심!)
-      // - 데이터가 유효한지 확인
-      // - VC의 소유자(credentialSubject.id)가 현재 선택된 DID와 일치하는지 확인
+      // 3. ✅ 필터링: "이 티켓의 주인이 현재 선택된 DID인가?"
       const filtered = vcData.filter(v => {
         if (!v) return false;
 
-        // VC 구조에 따라 id 위치 확인 (보통 credentialSubject.id 또는 credentialSubject.underName[0].id)
         const subject = v.credentialSubject || v.credential?.credentialSubject;
-        const ticketOwnerDid = subject?.id || subject?.underName?.[0]?.id;
+        const ticketOwnerDid = subject?.id; // 티켓 주인 DID
 
-        // 소유자 DID와 선택된 DID가 같은 것만 통과
+        // 디버깅용 로그 (확인 후 삭제 가능)
+        // console.log(`티켓주인: ${ticketOwnerDid} vs 내DID: ${selectedDidData.did}`);
+
+        // 정확히 일치하는 것만 리턴
         return ticketOwnerDid === selectedDidData.did;
       });
 
@@ -85,15 +85,15 @@ function TicketScreen() {
     }
   }, []);
 
-  // 1. 화면이 포커스될 때마다 데이터 갱신 (DID 변경 시 반영됨)
+  // 화면이 포커스될 때마다 데이터 갱신
   useFocusEffect(
     useCallback(() => {
       loadStoredVCs();
-      setIsDeleteMode(false); // 탭 이동 시 삭제 모드 초기화
+      setIsDeleteMode(false);
     }, [loadStoredVCs]),
   );
 
-  // 2. FCM/딥링크로 들어온 VC 처리
+  // 2️⃣ VC 발급 및 저장 (FCM/딥링크 처리)
   useEffect(() => {
     const fetchAndSaveVC = async () => {
       if (!targetUrl) return;
@@ -103,22 +103,28 @@ function TicketScreen() {
         const vc = result?.vc;
         if (!vc) return;
 
-        const ticketNumber = vc?.credentialSubject?.ticketNumber;
-        if (!ticketNumber) return;
+        const subject =
+          vc.credentialSubject || vc.credential?.credentialSubject;
+        const ticketNumber = subject?.ticketNumber;
+        const ownerDid = subject?.id; // 티켓 주인 DID
 
-        const storageKey = `vc:${ticketNumber}`;
-        const stored = await getItem(storageKey);
-
-        // 새로운 티켓 저장
-        if (!stored) {
-          await setItem(storageKey, JSON.stringify(vc));
-
-          // 저장 후 목록 갱신
-          await loadStoredVCs();
-          Alert.alert('알림', '새로운 티켓이 저장되었습니다.');
+        if (!ticketNumber || !ownerDid) {
+          console.warn('티켓 번호나 소유자 ID가 없습니다.');
+          return;
         }
+
+        // ✅ 중요: 키 생성 시 DID를 포함시켜 중복 덮어쓰기 방지
+        const storageKey = `vc:${ticketNumber}_${ownerDid}`;
+
+        // 저장
+        await setItem(storageKey, JSON.stringify(vc));
+        Alert.alert('알림', '새로운 티켓이 저장되었습니다.');
+
+        // 저장 후 목록 갱신
+        await loadStoredVCs();
       } catch (e) {
         console.error('VC 처리 중 오류:', e);
+        Alert.alert('오류', '티켓 발급 중 문제가 발생했습니다.');
       } finally {
         setLoading(false);
       }
@@ -127,16 +133,16 @@ function TicketScreen() {
     fetchAndSaveVC();
   }, [targetUrl, loadStoredVCs]);
 
+  // 3️⃣ 티켓 삭제
   const handleDeleteTicket = async (ticketNumber: string) => {
-    if (!ticketNumber) return;
+    if (!ticketNumber || !currentDid) return;
     try {
-      const storageKey = `vc:${ticketNumber}`;
+      // 삭제할 때도 DID를 포함한 키를 찾아야 함
+      const storageKey = `vc:${ticketNumber}_${currentDid.did}`;
       await removeItem(storageKey);
 
-      // UI 즉시 반영
-      setVcList(prev =>
-        prev.filter(v => v?.credentialSubject?.ticketNumber !== ticketNumber),
-      );
+      // 리스트 갱신
+      await loadStoredVCs();
 
       if (vcList.length <= 1) setIsDeleteMode(false);
     } catch (e) {
@@ -146,12 +152,10 @@ function TicketScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* 타이틀 변경: 현재 어떤 DID의 지갑인지 표시 */}
       <Text style={styles.title}>
         {currentDid ? `${currentDid.alias || 'My'} Tickets` : 'Ticket Screen'}
       </Text>
 
-      {/* 현재 DID 표시 (선택 사항) */}
       {currentDid && (
         <Text style={styles.subTitle} numberOfLines={1} ellipsizeMode="middle">
           Account: {currentDid.did}
@@ -177,16 +181,18 @@ function TicketScreen() {
       ) : (
         <FlatList
           data={vcList}
+          // 키 추출 시에도 ticketNumber만으로는 중복될 수 있으므로 index 조합 권장
           keyExtractor={(item, index) =>
-            item?.credentialSubject?.ticketNumber ?? String(index)
+            `${item?.credentialSubject?.ticketNumber}_${index}`
           }
           renderItem={({item, index}) => (
             <VCcard
-              key={item?.credentialSubject?.ticketNumber ?? index}
+              key={index}
               vc={item}
               index={index}
               isDeleteMode={isDeleteMode}
-              onDeletePress={handleDeleteTicket}
+              // 삭제 함수에 ticketNumber만 넘기면 꼬일 수 있으니 주의 (위의 handleDeleteTicket 수정함)
+              onDeletePress={tNum => handleDeleteTicket(tNum)}
             />
           )}
           contentContainerStyle={styles.scrollContent}
@@ -210,7 +216,7 @@ function TicketScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    paddingTop: 0, // 상단 여백 조절
+    paddingTop: 0,
     paddingHorizontal: 20,
     backgroundColor: '#f9f9f9',
   },

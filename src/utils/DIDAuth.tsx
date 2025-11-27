@@ -58,26 +58,25 @@ export async function get_challenge(
 
 // 25.03.19
 // Challenge 복호화 함수
-export async function decrypt_challenge(encryptedChallengeBase58: string) {
+export async function decrypt_challenge(
+  encryptedChallengeBase58: string,
+  holderXSecretKey: string, // <--- 1️⃣ 비밀키를 외부에서 받도록 추가
+) {
   try {
     console.log(
       `🔑 [Wallet] Received Encrypted Challenge: ${encryptedChallengeBase58}`,
     );
 
-    // 1️⃣ Holder의 X25519 Private Key 가져오기
-    let holderxprivatekeyBase58 = await getItem('xSecretkey');
+    // ❌ 삭제 또는 주석 처리 (AsyncStorage에서 가져오는 부분)
+    // let holderxprivatekeyBase58 = await getItem('xSecretkey');
+
+    // ✅ 변경: 전달받은 파라미터 사용
+    let holderxprivatekeyBase58 = holderXSecretKey;
+
     if (!holderxprivatekeyBase58) {
-      throw new Error('❌ Holder X25519 Private Key not found!');
+      throw new Error('❌ Holder X25519 Private Key not provided!');
     }
     let holderxprivatekey = bs58.decode(holderxprivatekeyBase58);
-
-    if (holderxprivatekey.length !== 32) {
-      throw new Error(
-        `❌ Invalid Holder X25519 Private Key Length: ${holderxprivatekey.length}`,
-      );
-    }
-    console.log(`✅ Holder X25519 Private Key (Decoded): ${holderxprivatekey}`);
-
     // 2️⃣ Issuer의 X25519 Public Key 가져오기
     const issuerX25519PublicKeyBase58 = ISSUER_INNER_PUBLIC_X25519_KEY;
     if (!issuerX25519PublicKeyBase58) {
