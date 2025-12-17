@@ -11,7 +11,7 @@ import {useRoute, useNavigation, RouteProp} from '@react-navigation/native';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {get_request_object, post_vp, verify_challenge} from '../utils/Verify';
 import {getItem} from '../utils/AsyncStorage';
-import {decrypt_challenge} from '../utils/DIDAuth';
+import {decrypt_challenge} from '../utils/Verify';
 
 type RootStackParamList = {
   Verify: {vp: any};
@@ -91,8 +91,8 @@ function VerifyScreen() {
       console.error('challenge가 없습니다.');
       return;
     }
-    if (!selectedDid || selectedDid.xSecretkey) {
-      console.error();
+    if (!selectedDid) {
+      console.error('did가 없습니다.');
       return;
     }
 
@@ -101,6 +101,7 @@ function VerifyScreen() {
         challenge,
         selectedDid.xSecretkey,
       );
+      console.log('복호화된 원본 문자열: ', decryptedRes);
       if (!decryptedRes) {
         throw new Error('복호화 실패');
       }
@@ -140,7 +141,7 @@ function VerifyScreen() {
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.verifyButton} onPress={did_auth}>
-          <Text style={styles.buttonText}>티켓 VP 검증 진행 - submit vp</Text>
+          <Text style={styles.buttonText}>티켓 VP 검증 진행 - did auth</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
