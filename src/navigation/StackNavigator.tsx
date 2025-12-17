@@ -6,6 +6,7 @@ import ProfileScreen from '../screen/ProfileScreen';
 import TicketScreen from '../screen/TicketScreen';
 import AuthScreen from '../screen/AuthScreen';
 import CameraScreen from '../screen/CameraScreen';
+import VerifyScreen from '../screen/VerifyScreen';
 
 export type StackParamList = {
   Home: undefined;
@@ -13,6 +14,7 @@ export type StackParamList = {
   Ticket: undefined;
   Auth: undefined;
   camera: undefined;
+  Verify: undefined;
 };
 
 const Stack = createStackNavigator<StackParamList>();
@@ -25,6 +27,7 @@ function StackNavigator() {
       <Stack.Screen name="Profile" component={ProfileScreen} />
       <Stack.Screen name="Ticket" component={TicketScreen} />
       <Stack.Screen name="Auth" component={AuthScreen} />
+      <Stack.Screen name="Verify" component={VerifyScreen} />
     </Stack.Navigator>
   );
 }
