@@ -15,7 +15,7 @@ import {getItem} from '../utils/AsyncStorage';
 import {decrypt_challenge} from '../utils/Verify';
 
 type RootStackParamList = {
-  Verify: {vp: any; requestUri?: string};
+  Verify: {vp: any; requestUri: string};
 };
 
 interface DidData {
@@ -52,11 +52,12 @@ function VerifyScreen() {
 
     try {
       const response = await get_request_object(
+        requestUri,
         subject.ticketNumber,
         subject.id,
         selectedDid.did,
       );
-
+      console.log(requestUri);
       console.log('서버 응답:', response);
 
       if (response && response.presentationSubmissionURL) {
@@ -77,7 +78,7 @@ function VerifyScreen() {
     }
 
     try {
-      const response = await post_vp(vp);
+      const response = await post_vp(SubmissionUrl, vp);
       console.log('서버 응답: ', response);
       setChallenge(response.challenge);
       setDidAuthUrl(response.DIDAuthURL);
@@ -106,7 +107,11 @@ function VerifyScreen() {
       if (!decryptedRes) {
         throw new Error('복호화 실패');
       }
-      const response = await verify_challenge(selectedDid.did, decryptedRes);
+      const response = await verify_challenge(
+        didAuthUrl,
+        selectedDid.did,
+        decryptedRes,
+      );
       console.log(response);
       if (response == true) {
         Alert.alert('검증 완료');
@@ -126,8 +131,10 @@ function VerifyScreen() {
         <Text style={styles.title}>검증 화면</Text>
 
         <View style={styles.vpContainer}>
-          <Text style={styles.label}>선택된 DID : {selectedDid?.did}</Text>
-          <Text style={styles.label}>선택된 DID : {selectedDid?.alias}</Text>
+          <Text style={styles.label}>선택된 DID:</Text>
+          <Text style={styles.label}>
+            {selectedDid?.alias} ({selectedDid?.did})
+          </Text>
           <Text style={styles.label}>선택 된 티켓 VP:</Text>
           <ScrollView style={styles.jsonBox}>
             <Text style={styles.jsonText}>{JSON.stringify(vp, null, 2)}</Text>

@@ -111,13 +111,10 @@ function TicketDetailScreen() {
         </ScrollView>
 
         <View style={styles.bottomButtons}>
-          <TouchableOpacity style={styles.Button} onPress={create_vp}>
-            <Text style={styles.backButtonText}>🎫</Text>
-          </TouchableOpacity>
           {/* 2025.09.07 추가 */}
           {/* 검증방식 개선을 위한 데모 */}
           <TouchableOpacity style={styles.Button} onPress={openCameraComponent}>
-            <Text style={styles.backButtonText}>티켓 검증하기</Text>
+            <Text style={styles.backButtonText}>티켓 검증하기 🎫</Text>
           </TouchableOpacity>
           {/* 검증방식 개선을 위한 데모 */}
           <TouchableOpacity

@@ -4,11 +4,12 @@ import bs58 from 'bs58';
 import {VERIFIER_X25519_PUBLIC_KEY} from '@env';
 
 export async function get_request_object(
+  request_url: string,
   ticektNumber: string,
   primaryPurchaserDid: string,
   holderDid: string,
 ) {
-  const url = 'https://verifier.bluerack.org/api/v1/verify/request-object';
+  const url = request_url;
 
   const requestBody = {
     ticketNumber: ticektNumber,
@@ -26,8 +27,8 @@ export async function get_request_object(
   }
 }
 
-export async function post_vp(vp: any) {
-  const url = 'https://verifier.bluerack.org/api/v1/verify/presentation';
+export async function post_vp(SubmissionUrl: string, vp: any) {
+  const url = SubmissionUrl;
 
   const requestBody = {
     vp_format: 'ldp_vp',
@@ -122,11 +123,12 @@ export async function decrypt_challenge(
 }
 
 export async function verify_challenge(
+  didauthurl: string,
   did: string,
   decryptedChallenge: string,
 ): Promise<boolean> {
   try {
-    const url = `https://verifier.bluerack.org/api/v1/verify/verify-holder-challenge`;
+    const url = didauthurl;
 
     const requestBody = {
       decrypted_challenge: decryptedChallenge,
