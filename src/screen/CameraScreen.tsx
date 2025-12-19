@@ -1,48 +1,43 @@
 import React, {useRef, useState} from 'react';
 import {RNCamera} from 'react-native-camera';
-import {View, TouchableOpacity, Text, StyleSheet, Alert} from 'react-native';
-// ✅ 네비게이션 훅 추가
-import {useNavigation} from '@react-navigation/native';
+import {View, Text, StyleSheet, Alert} from 'react-native';
+import {useNavigation, useRoute, RouteProp} from '@react-navigation/native';
 import {StackNavigationProp} from '@react-navigation/stack';
 
-// ✅ 네비게이션 타입 정의 (기존 RootStackParamList 참고)
 type RootStackParamList = {
   MainTabs: {
     screen: 'Ticket';
     params: {targetUrl: string};
   };
   Auth: {authRequestId: string};
+  Camera: {vp: any};
+  Verify: {vp: any; requestUri?: string};
 };
 
 const CameraScreen = () => {
   const cameraRef = useRef<RNCamera | null>(null);
   const [scanned, setScanned] = useState(false);
 
-  // ✅ 네비게이션 객체 가져오기
   const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
+  const route = useRoute<RouteProp<RootStackParamList, 'Camera'>>();
 
-  const takePicture = async () => {
-    if (cameraRef.current) {
-      const options = {quality: 0.5, base64: true, width: 800};
-      const data = await cameraRef.current.takePictureAsync(options);
-      console.log('촬영된 사진 URI:', data.uri);
-    }
-  };
+  // TicketDetailScreen에서 넘어온 vp 데이터
+  const {vp} = route.params || {};
 
-  // ✅ 딥링크 파싱 및 이동 로직 함수
+  // ✅ 딥링크 핸들러 수정 (verify 로직 추가)
   const handleDeepLink = (url: string) => {
     const SCHEME = 'uxmwallet://';
 
-    // 1. 내 앱의 딥링크인지 확인
     if (!url.startsWith(SCHEME)) {
       return false;
     }
 
     try {
-      // 2. 파싱 로직 (uxmwallet://ticket?targetUrl=... 등)
+      // 스키마 제거 (uxmwallet:// 제거)
       const pathAndQuery = url.replace(SCHEME, '');
       const [path, queryString] = pathAndQuery.split('?');
 
+      // 파라미터 파싱
       const params: {[key: string]: string} = {};
       if (queryString) {
         queryString.split('&').forEach(param => {
@@ -55,50 +50,89 @@ const CameraScreen = () => {
 
       console.log(`[DeepLink] Path: ${path}, Params:`, params);
 
-      // 3. 경로에 따라 이동
+      // 1. 티켓 관련 딥링크
       if (path === 'ticket' || path.includes('ticket')) {
         if (params.targetUrl) {
           navigation.navigate('MainTabs', {
             screen: 'Ticket',
             params: {targetUrl: params.targetUrl},
           });
-          return true; // 이동 성공
-        }
-      } else if (path === 'auth') {
-        if (params.authRequestId) {
-          navigation.navigate('Auth', {authRequestId: params.authRequestId});
-          return true; // 이동 성공
+          return true;
         }
       }
-      return false; // 경로는 맞지만 파라미터 부족 등으로 실패
+      // 2. Auth 관련 딥링크
+      else if (path === 'auth') {
+        if (params.authRequestId) {
+          navigation.navigate('Auth', {authRequestId: params.authRequestId});
+          return true;
+        }
+      }
+      // ✅ 3. Verify (검증) 관련 딥링크 추가
+      else if (path === 'verify') {
+        // 프론트엔드에서 request_uri로 보냈으므로 이를 체크
+        if (params.request_uri) {
+          console.log('✅ Verify DeepLink 감지:', params.request_uri);
+
+          // Verify 화면으로 이동 (기존 vp + QR에서 읽은 requestUri 전달)
+          navigation.replace('Verify', {
+            vp: vp,
+            requestUri: params.request_uri,
+          });
+          return true;
+        }
+      }
+
+      return false;
     } catch (e) {
       console.error('딥링크 파싱 에러:', e);
       return false;
     }
   };
 
-  // ✅ QR 코드 리더 핸들러 수정
   const handleBarCodeRead = ({data, type}: {data: string; type: string}) => {
-    if (!scanned) {
-      setScanned(true); // 중복 스캔 방지
-      console.log(`QR Scanned (${type}):`, data);
+    if (scanned) return;
 
-      // 1. 딥링크 처리 시도
-      const isHandled = handleDeepLink(data);
+    console.log(`QR Scanned (${type}):`, data);
 
-      if (isHandled) {
-        // ✅ 성공 시: 자동으로 화면이 넘어가므로 별도 Alert 없음
-        // 돌아왔을 때 다시 스캔 가능하도록 약간의 딜레이 후 초기화
-        setTimeout(() => setScanned(false), 2000);
-      } else {
-        // ✅ 실패 시 (일반 QR이거나 처리 불가능): 기존처럼 Alert 표시
-        Alert.alert('QR 코드 인식됨', data, [
-          {
-            text: '다시 스캔',
-            onPress: () => setScanned(false),
-          },
-        ]);
+    // 1. OID4VP 표준 스키마 처리 (기존 코드 유지)
+    if (data.startsWith('openid-vc://')) {
+      setScanned(true);
+      try {
+        const regex = /[?&]request_uri=([^&]+)/;
+        const match = data.match(regex);
+        if (match && match[1]) {
+          const requestUri = decodeURIComponent(match[1]);
+          navigation.replace('Verify', {
+            vp: vp,
+            requestUri: requestUri,
+          });
+          return;
+        }
+      } catch (error) {
+        console.error('OID4VP 파싱 에러:', error);
       }
+    }
+
+    // 2. 커스텀 딥링크 (uxmwallet://) 처리
+    // handleDeepLink 내부에서 'verify'를 처리하도록 수정됨
+    const isHandled = handleDeepLink(data);
+
+    if (isHandled) {
+      setScanned(true);
+      // 성공 시 별도 알림 없이 이동
+      setTimeout(() => setScanned(false), 2000);
+      return;
+    }
+
+    // 3. 처리 실패 시 알림
+    if (!scanned) {
+      setScanned(true);
+      Alert.alert('알림', `지원하지 않는 QR 코드입니다.\n데이터: ${data}`, [
+        {
+          text: '다시 스캔',
+          onPress: () => setScanned(false),
+        },
+      ]);
     }
   };
 
@@ -113,8 +147,6 @@ const CameraScreen = () => {
         onBarCodeRead={handleBarCodeRead}
         barCodeTypes={[RNCamera.Constants.BarCodeType.qr]}
       />
-
-      {/* (선택 사항) 스캔 가이드 라인 UI */}
       <View style={styles.overlay}>
         <View style={styles.scanFrame} />
         <Text style={styles.guideText}>QR 코드를 스캔하세요</Text>
@@ -126,18 +158,6 @@ const CameraScreen = () => {
 const styles = StyleSheet.create({
   container: {flex: 1, backgroundColor: 'black'},
   camera: {flex: 1},
-  button: {
-    position: 'absolute',
-    bottom: 50,
-    alignSelf: 'center',
-    backgroundColor: '#fff',
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderRadius: 20,
-  },
-  buttonText: {fontSize: 16, fontWeight: 'bold', color: '#000'},
-
-  // 가이드라인 스타일
   overlay: {
     ...StyleSheet.absoluteFillObject,
     justifyContent: 'center',

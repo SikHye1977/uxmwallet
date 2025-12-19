@@ -23,7 +23,7 @@ type RootStackParamList = {
   Ticket: undefined;
   FullscreenQR: {value: string};
   Camera: {vp: any};
-  Verify: {vp: any};
+  Verify: {vp: any; requestUri?: string};
 };
 
 function TicketDetailScreen() {
@@ -77,18 +77,6 @@ function TicketDetailScreen() {
     setShowQR(prev => !prev);
   };
 
-  // 2025.12.17 추가
-  // verify 개발을 위한 코드, 추후 통합 필요
-  const moveToVerifyScreen = async () => {
-    let targetVp = vp;
-    if (!targetVp) {
-      targetVp = await createVP(vc);
-      setVp(targetVp);
-    }
-
-    navigation.navigate('Verify', {vp: targetVp});
-  };
-
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.contentWrapper}>
@@ -132,11 +120,6 @@ function TicketDetailScreen() {
             <Text style={styles.backButtonText}>티켓 검증하기</Text>
           </TouchableOpacity>
           {/* 검증방식 개선을 위한 데모 */}
-          {/* 2025.12.17 */}
-          {/* 검증 구현을 위한 코드, 추후 통합 필요 */}
-          <TouchableOpacity style={styles.Button} onPress={moveToVerifyScreen}>
-            <Text style={styles.backButtonText}>검증화면 이동</Text>
-          </TouchableOpacity>
           <TouchableOpacity
             style={styles.backButton}
             onPress={() => navigation.goBack()}>

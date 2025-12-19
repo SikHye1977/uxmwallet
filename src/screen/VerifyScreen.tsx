@@ -5,6 +5,7 @@ import {
   TouchableOpacity,
   View,
   ScrollView,
+  Alert,
 } from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import {useRoute, useNavigation, RouteProp} from '@react-navigation/native';
@@ -14,7 +15,7 @@ import {getItem} from '../utils/AsyncStorage';
 import {decrypt_challenge} from '../utils/Verify';
 
 type RootStackParamList = {
-  Verify: {vp: any};
+  Verify: {vp: any; requestUri?: string};
 };
 
 interface DidData {
@@ -31,7 +32,7 @@ function VerifyScreen() {
   const [SubmissionUrl, setSubmissionUrl] = useState('');
   const [didAuthUrl, setDidAuthUrl] = useState('');
   const [challenge, setChallenge] = useState('');
-  const {vp} = route.params;
+  const {vp, requestUri} = route.params;
 
   const SetDid = async () => {
     const selectedDidJson = await getItem('SELECTED_DID');
@@ -107,6 +108,9 @@ function VerifyScreen() {
       }
       const response = await verify_challenge(selectedDid.did, decryptedRes);
       console.log(response);
+      if (response == true) {
+        Alert.alert('검증 완료');
+      }
     } catch (error) {
       console.error('did auth 실패:', error);
     }

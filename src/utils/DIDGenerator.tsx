@@ -14,30 +14,6 @@ import 'react-native-get-random-values';
 import {AttribRequest} from '@hyperledger/indy-vdr-react-native';
 import {Platform} from 'react-native';
 
-// 25.02.10 추가
-// ED25519 키 쌍 생성 및 DID 생성
-// export async function generateDID() {
-//   // ✅ ED25519 키 쌍 생성 (32바이트)
-//   const keyPair = nacl.sign.keyPair();
-
-//   // ✅ Base58 인코딩 (DID는 16바이트 또는 32바이트 키를 사용해야 함)
-//   const publicKeyBase58 = bs58.encode(keyPair.publicKey); // 44~45자
-//   const privateKeyBase58 = bs58.encode(keyPair.secretKey);
-
-//   // ✅ DID 생성 (첫 22~23자 사용하여 Indy 규격 충족)
-//   const did = publicKeyBase58.slice(0, 22); // 22~23자 유지
-
-//   console.log("✅ 생성된 DID:", did);
-//   console.log("✅ Public Key (Base58):", publicKeyBase58);
-//   console.log("✅ Private Key (Base58):", privateKeyBase58);
-
-//   return {
-//     did,
-//     publicKey: publicKeyBase58,
-//     privateKey: privateKeyBase58,
-//   };
-// }
-
 // 25.03.18 추가
 // Ed25519, x25519 키 쌍 생성 및 DID 생성
 export async function generateSeparateKeyPairs() {
